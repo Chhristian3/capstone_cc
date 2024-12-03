@@ -12,7 +12,7 @@ interface AppointmentCalendarProps {
 export function AppointmentCalendar({
   onSelectDate,
 }: AppointmentCalendarProps) {
-  const { appointments } = useAppointments()
+  const { allAppointments: appointments } = useAppointments()
   const [appointmentDates, setAppointmentDates] = useState<Date[]>([])
 
   useEffect(() => {

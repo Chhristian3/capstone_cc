@@ -30,7 +30,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUser()
-  const { appointments } = useAppointments()
+  const { userAppointments: appointments } = useAppointments()
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null)
 
   const bookedDates = appointments.map((app) => new Date(app.appointmentDate))

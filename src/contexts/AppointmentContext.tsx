@@ -20,7 +20,8 @@ type Appointment = {
 }
 
 type AppointmentContextType = {
-  appointments: Appointment[]
+  userAppointments: Appointment[]
+  allAppointments: Appointment[]
   refreshAppointments: () => void
   addAppointment: (appointment: Omit<Appointment, "id">) => Promise<void>
 }
@@ -34,27 +35,47 @@ export function AppointmentProvider({
 }: {
   children: React.ReactNode
 }) {
-  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [userAppointments, setUserAppointments] = useState<Appointment[]>([])
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([])
 
-  const fetchAppointments = async () => {
+  const fetchUserAppointments = async () => {
     try {
-      const response = await fetch("/api/appointments", { cache: "no-store" })
+      const response = await fetch("/api/appointments/user", {
+        cache: "no-store",
+      })
       if (!response.ok) {
-        throw new Error("Failed to fetch appointments")
+        throw new Error("Failed to fetch user appointments")
       }
       const data = await response.json()
-      setAppointments(data)
+      setUserAppointments(data)
     } catch (error) {
-      console.error("Error fetching appointments:", error)
+      console.error("Error fetching user appointments:", error)
+    }
+  }
+
+  const fetchAllAppointments = async () => {
+    try {
+      const response = await fetch("/api/appointments", {
+        cache: "no-store",
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch all appointments")
+      }
+      const data = await response.json()
+      setAllAppointments(data)
+    } catch (error) {
+      console.error("Error fetching all appointments:", error)
     }
   }
 
   useEffect(() => {
-    fetchAppointments()
+    fetchUserAppointments()
+    fetchAllAppointments()
   }, [])
 
   const refreshAppointments = () => {
-    fetchAppointments()
+    fetchUserAppointments()
+    fetchAllAppointments()
   }
 
   const addAppointment = async (appointment: Omit<Appointment, "id">) => {
@@ -69,7 +90,7 @@ export function AppointmentProvider({
       if (!response.ok) {
         throw new Error("Failed to add appointment")
       }
-      await fetchAppointments()
+      await refreshAppointments()
     } catch (error) {
       console.error("Error adding appointment:", error)
       throw error
@@ -78,7 +99,12 @@ export function AppointmentProvider({
 
   return (
     <AppointmentContext.Provider
-      value={{ appointments, refreshAppointments, addAppointment }}
+      value={{
+        userAppointments,
+        allAppointments,
+        refreshAppointments,
+        addAppointment,
+      }}
     >
       {children}
     </AppointmentContext.Provider>

@@ -32,7 +32,7 @@ type Appointment = {
 }
 
 export function AppointmentList() {
-  const { appointments } = useAppointments()
+  const { userAppointments: appointments } = useAppointments()
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
 
   const sortedAppointments = [...appointments].sort((a, b) => {
