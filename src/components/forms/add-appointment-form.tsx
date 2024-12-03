@@ -89,7 +89,7 @@ export function AddAppointmentForm({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      console.log(values)
+      // @ts-ignore
       await addAppointment({
         ...values,
         customerName: user?.fullName || "Unknown",
