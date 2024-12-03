@@ -1,0 +1,59 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum RatingValue {
+  VeryDissatisfied
+  Dissatisfied
+  Neutral
+  Satisfied
+  VerySatisfied
+}
+
+model Appointment {
+  id             String     @id @default(cuid())
+  userId         String
+  title          String    
+  customerName   String
+  appointmentDate DateTime
+  expirationDate DateTime
+  serviceTypeId  String     @map(name: "service_type_id")
+  description    String?
+  rating         Rating?    
+  createdAt      DateTime   @default(now()) @map(name: "created_at")
+  updatedAt      DateTime   @updatedAt @map(name: "updated_at")
+
+  serviceType    ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  @@map(name: "appointments")
+}
+
+
+model ServiceType {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime     @default(now()) @map(name: "created_at")
+  updatedAt   DateTime     @updatedAt @map(name: "updated_at")
+
+  appointments Appointment[]
+
+  @@map(name: "service_types")
+}
+
+model Rating {
+  id            String     @id @default(cuid())
+  appointmentId String     @unique @map(name: "appointment_id")
+  appointment   Appointment @relation(fields: [appointmentId], references: [id]) // Owns the relationship
+  ratingValue   RatingValue
+  comment       String?
+  createdAt     DateTime   @default(now()) @map(name: "created_at")
+  updatedAt     DateTime   @updatedAt @map(name: "updated_at")
+
+  @@map(name: "ratings")
+}

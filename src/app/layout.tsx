@@ -2,9 +2,12 @@ import "@/styles/globals.css"
 
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
+import { AppointmentProvider } from "@/contexts/AppointmentContext"
+import { ClerkProvider } from "@clerk/nextjs"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -79,7 +82,16 @@ export default function RootLayout({ children }: RootLayoutProps) {
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ClerkProvider
+            publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+            signInFallbackRedirectUrl="/client"
+            signUpFallbackRedirectUrl="/onboarding"
+          >
+            <AppointmentProvider>
+              {children}
+              <Toaster />
+            </AppointmentProvider>
+          </ClerkProvider>
         </ThemeProvider>
       </body>
     </html>
