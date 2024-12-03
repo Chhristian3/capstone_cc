@@ -85,7 +85,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <ClerkProvider
             publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
             signInFallbackRedirectUrl="/client"
-            signUpFallbackRedirectUrl="/onboarding"
+            signUpFallbackRedirectUrl="/client"
           >
             <AppointmentProvider>
               {children}
