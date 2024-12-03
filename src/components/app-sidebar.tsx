@@ -46,17 +46,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar {...props}>
-      <SidebarHeader className="flex flex-row gap-5 border-b border-sidebar-border">
-        <SignedOut>
-          <SignInButton />
-        </SignedOut>
-        <SignedIn>
-          <UserButton />
-        </SignedIn>
-        {user?.fullName}
-        <div className="gap-5">
-          <ModeToggle />
+      <SidebarHeader className="flex flex-row justify-between gap-5 border-b border-sidebar-border">
+        <div className="flex items-center gap-3">
+          <SignedOut>
+            <SignInButton />
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+          <span className="text-lg">{user?.fullName}</span>
         </div>
+        <ModeToggle />
       </SidebarHeader>
       <SidebarContent>
         <DatePicker onSelect={handleDateSelect} bookedDates={bookedDates} />
