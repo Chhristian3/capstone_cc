@@ -31,7 +31,10 @@ export function AddAppointmentButton() {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 md:grid-cols-2">
-          <AppointmentCalendar onSelectDate={setSelectedDate} />
+          <AppointmentCalendar
+            onSelectDate={setSelectedDate}
+            selectedDate={selectedDate}
+          />
           <AddAppointmentForm
             onSuccess={() => setOpen(false)}
             selectedDate={selectedDate}
