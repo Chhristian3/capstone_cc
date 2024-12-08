@@ -21,6 +21,7 @@ model Appointment {
   title          String    
   customerName   String
   appointmentDate DateTime
+  appointmentEndDate DateTime
   expirationDate DateTime
   serviceTypeId  String     @map(name: "service_type_id")
   description    String?

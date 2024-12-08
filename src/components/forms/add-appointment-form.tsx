@@ -27,21 +27,36 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
-const formSchema = z.object({
-  title: z.string().min(1, { message: "Title is required" }),
-  appointmentDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Please enter a valid date and time.",
-  }),
-  serviceTypeId: z.string().min(1, {
-    message: "Please select a service type.",
-  }),
-  description: z
-    .string()
-    .max(500, {
-      message: "Description must not exceed 500 characters.",
-    })
-    .optional(),
-})
+const formSchema = z
+  .object({
+    title: z.string().min(1, { message: "Title is required" }),
+    appointmentDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+      message: "Please enter a valid date and time.",
+    }),
+    appointmentEndDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+      message: "Please enter a valid end date and time.",
+    }),
+    serviceTypeId: z.string().min(1, {
+      message: "Please select a service type.",
+    }),
+    description: z
+      .string()
+      .max(500, {
+        message: "Description must not exceed 500 characters.",
+      })
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      const start = new Date(data.appointmentDate)
+      const end = new Date(data.appointmentEndDate)
+      return end > start && start.toDateString() === end.toDateString()
+    },
+    {
+      message: "End time must be after start time and on the same day",
+      path: ["appointmentEndDate"],
+    }
+  )
 
 async function getServiceTypes() {
   const res = await fetch("/api/service-types")
@@ -70,6 +85,7 @@ export function AddAppointmentForm({
     defaultValues: {
       title: "",
       appointmentDate: "",
+      appointmentEndDate: "",
       serviceTypeId: "",
       description: "",
     },
@@ -81,9 +97,12 @@ export function AddAppointmentForm({
 
   useEffect(() => {
     if (selectedDate) {
-      const date = new Date(selectedDate)
-      date.setHours(9, 0, 0, 0) // Set default time to 9:00 AM
-      form.setValue("appointmentDate", date.toISOString().slice(0, 16))
+      const startDate = new Date(selectedDate)
+      startDate.setHours(9, 0, 0, 0) // Set default start time to 9:00 AM
+      const endDate = new Date(selectedDate)
+      endDate.setHours(10, 0, 0, 0) // Set default end time to 10:00 AM
+      form.setValue("appointmentDate", startDate.toISOString().slice(0, 16))
+      form.setValue("appointmentEndDate", endDate.toISOString().slice(0, 16))
     }
   }, [selectedDate, form])
 
@@ -94,7 +113,7 @@ export function AddAppointmentForm({
         ...values,
         customerName: user?.fullName || "Unknown",
         expirationDate: new Date(
-          new Date(values.appointmentDate).getTime() + 60 * 60 * 1000
+          new Date(values.appointmentEndDate).getTime() + 60 * 60 * 1000
         ).toISOString(),
       })
 
@@ -106,12 +125,12 @@ export function AddAppointmentForm({
               <strong>Title:</strong> {values.title}
             </p>
             <p>
-              <strong>Date:</strong>{" "}
-              {new Date(values.appointmentDate).toLocaleDateString()}
+              <strong>Start:</strong>{" "}
+              {new Date(values.appointmentDate).toLocaleString()}
             </p>
             <p>
-              <strong>Time:</strong>{" "}
-              {new Date(values.appointmentDate).toLocaleTimeString()}
+              <strong>End:</strong>{" "}
+              {new Date(values.appointmentEndDate).toLocaleString()}
             </p>
             {values.description && (
               <p>
@@ -122,11 +141,11 @@ export function AddAppointmentForm({
         ),
       })
       onSuccess()
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
       toast({
         title: "Error",
-        description: "There was a problem creating your appointment.",
+        description: error.message,
         variant: "destructive",
       })
     }
@@ -153,7 +172,20 @@ export function AddAppointmentForm({
           name="appointmentDate"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Appointment Date and Time</FormLabel>
+              <FormLabel>Start Date and Time</FormLabel>
+              <FormControl>
+                <Input type="datetime-local" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="appointmentEndDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>End Date and Time</FormLabel>
               <FormControl>
                 <Input type="datetime-local" {...field} />
               </FormControl>

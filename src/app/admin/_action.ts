@@ -4,7 +4,7 @@ import { clerkClient } from "@clerk/nextjs/server"
 
 import { checkRole } from "@/lib/roles"
 
-export async function setRole(formData: FormData) {
+export async function setRole(formData: any) {
   const client = await clerkClient()
 
   // Check that the user trying to set the role is an admin

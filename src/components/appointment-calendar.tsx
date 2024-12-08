@@ -34,7 +34,7 @@ export function AppointmentCalendar({
       selected={undefined}
       onSelect={onSelectDate}
       className="rounded-md border"
-      disabled={isDateDisabled} // Pass the function to disable booked dates
+      // disabled={isDateDisabled} // Pass the function to disable booked dates
       modifiers={{ booked: appointmentDates }}
       modifiersStyles={{
         booked: { backgroundColor: "#00ffff33" },

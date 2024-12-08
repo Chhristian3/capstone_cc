@@ -4,50 +4,6 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const id = searchParams.get("id")
-
-  if (id) {
-    try {
-      const appointment = await prisma.appointment.findUnique({
-        where: { id },
-        include: {
-          serviceType: true,
-          rating: true,
-        },
-      })
-      if (!appointment) {
-        return NextResponse.json(
-          { error: "Appointment not found" },
-          { status: 404 }
-        )
-      }
-      return NextResponse.json(appointment)
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Error fetching appointment" },
-        { status: 500 }
-      )
-    }
-  } else {
-    try {
-      const appointments = await prisma.appointment.findMany({
-        include: {
-          serviceType: true,
-          rating: true,
-        },
-      })
-      return NextResponse.json(appointments)
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Error fetching appointments" },
-        { status: 500 }
-      )
-    }
-  }
-}
-
 export async function POST(req: NextRequest) {
   const { userId } = getAuth(req)
 
@@ -57,13 +13,61 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
+    const newAppointmentStart = new Date(body.appointmentDate)
+    const newAppointmentEnd = new Date(body.appointmentEndDate)
+
+    // Check for conflicting appointments
+    const conflictingAppointment = await prisma.appointment.findFirst({
+      where: {
+        AND: [
+          {
+            OR: [
+              {
+                appointmentDate: {
+                  lte: newAppointmentEnd,
+                },
+                appointmentEndDate: {
+                  gte: newAppointmentStart,
+                },
+              },
+              {
+                appointmentDate: {
+                  gte: newAppointmentStart,
+                  lte: newAppointmentEnd,
+                },
+              },
+              {
+                appointmentEndDate: {
+                  gte: newAppointmentStart,
+                  lte: newAppointmentEnd,
+                },
+              },
+            ],
+          },
+          {
+            NOT: {
+              id: body.id, // Exclude the current appointment if it's an update
+            },
+          },
+        ],
+      },
+    })
+
+    if (conflictingAppointment) {
+      return NextResponse.json(
+        { error: "This time slot conflicts with an existing appointment" },
+        { status: 409 }
+      )
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
         userId,
         title: body.title,
         customerName: body.customerName,
-        appointmentDate: new Date(body.appointmentDate),
-        expirationDate: new Date(body.expirationDate),
+        appointmentDate: newAppointmentStart,
+        appointmentEndDate: newAppointmentEnd,
+        expirationDate: new Date(newAppointmentEnd.getTime() + 60 * 60 * 1000),
         description: body.description,
         serviceType: {
           connect: { id: body.serviceTypeId },
@@ -76,7 +80,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(appointment, { status: 201 })
   } catch (error) {
     console.error("Error creating appointment:", error)
-    return NextResponse.json({ error: error }, { status: 500 })
+    return NextResponse.json(
+      { error: "Error creating appointment" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const { userId } = getAuth(req)
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  try {
+    const appointments = await prisma.appointment.findMany({
+      where: { userId },
+      include: {
+        serviceType: true,
+        rating: true,
+      },
+      orderBy: { appointmentDate: "desc" },
+    })
+    return NextResponse.json(appointments)
+  } catch (error) {
+    console.error("Error fetching appointments:", error)
+    return NextResponse.json(
+      { error: "Error fetching appointments" },
+      { status: 500 }
+    )
   }
 }
 
