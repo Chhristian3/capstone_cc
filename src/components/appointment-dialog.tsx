@@ -30,11 +30,11 @@ export function AppointmentDialog({
 }: AppointmentDialogProps) {
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="overflow-y-auto sm:max-h-[600px] sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Appointments for {date.toDateString()}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+        <ScrollArea className="h-[300px] w-full overflow-y-auto rounded-md border p-4">
           {appointments.length > 0 ? (
             appointments.map((appointment, index) => (
               <React.Fragment key={appointment.id}>

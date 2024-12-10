@@ -96,7 +96,6 @@ export async function GET(req: NextRequest) {
 
   try {
     const appointments = await prisma.appointment.findMany({
-      where: { userId },
       include: {
         serviceType: true,
         rating: true,
