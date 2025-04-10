@@ -16,6 +16,7 @@ enum RatingValue {
 }
 
 enum AppointmentStatus {
+  PENDING
   SCHEDULED
   COMPLETED
   CANCELLED
@@ -31,7 +32,7 @@ model Appointment {
   expirationDate DateTime
   serviceTypeId  String     @map(name: "service_type_id")
   description    String?
-  status        AppointmentStatus @default(SCHEDULED)
+  status        AppointmentStatus @default(PENDING)
   rating         Rating?    
   createdAt      DateTime   @default(now()) @map(name: "created_at")
   updatedAt      DateTime   @updatedAt @map(name: "updated_at")
