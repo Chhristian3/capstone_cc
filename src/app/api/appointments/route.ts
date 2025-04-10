@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
       },
       include: {
         serviceType: true,
+        rating: true,
       },
     })
     return NextResponse.json(appointment, { status: 201 })
@@ -131,6 +132,7 @@ export async function PUT(req: NextRequest) {
         customerName: body.customerName,
         appointmentDate: new Date(body.appointmentDate),
         expirationDate: new Date(body.expirationDate),
+        status: body.status,
         serviceType: {
           connect: { id: body.serviceTypeId },
         },

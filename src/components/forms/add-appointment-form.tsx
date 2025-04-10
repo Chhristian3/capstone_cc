@@ -115,6 +115,7 @@ export function AddAppointmentForm({
         expirationDate: new Date(
           new Date(values.appointmentEndDate).getTime() + 60 * 60 * 1000
         ).toISOString(),
+        status: "SCHEDULED",
       })
 
       toast({

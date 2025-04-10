@@ -8,19 +8,45 @@ import {
   SortAscIcon,
   SortDescIcon,
   UserIcon,
+  CheckCircleIcon,
+  Clock3Icon,
+  XCircleIcon,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { toast } from "sonner"
+
+type AppointmentStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED"
 
 type Appointment = {
   id: string
   title: string
   customerName: string
   appointmentDate: string
+  appointmentEndDate: string
+  expirationDate: string
   description?: string
+  status: AppointmentStatus
   serviceType: {
     id: string
     name: string
@@ -32,46 +58,141 @@ type Appointment = {
 }
 
 export function AppointmentList() {
-  const { userAppointments: appointments } = useAppointments()
+  const { userAppointments: appointments, updateAppointment } = useAppointments()
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
+  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all")
+  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  const sortedAppointments = [...appointments].sort((a, b) => {
-    if (sortOrder === "desc") {
-      return (
-        new Date(b.appointmentDate).getTime() -
-        new Date(a.appointmentDate).getTime()
-      )
-    } else {
-      return (
-        new Date(a.appointmentDate).getTime() -
-        new Date(b.appointmentDate).getTime()
-      )
-    }
-  })
+  const filteredAndSortedAppointments = [...appointments]
+    .filter((appointment) => statusFilter === "all" || appointment.status === statusFilter)
+    .sort((a, b) => {
+      if (sortOrder === "desc") {
+        return new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()
+      } else {
+        return new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime()
+      }
+    })
 
   const toggleSort = () => {
     setSortOrder(sortOrder === "desc" ? "asc" : "desc")
+  }
+
+  const getStatusVariant = (status: AppointmentStatus): "default" | "destructive" | "secondary" => {
+    switch (status) {
+      case "COMPLETED":
+        return "default"
+      case "CANCELLED":
+        return "destructive"
+      default:
+        return "secondary"
+    }
+  }
+
+  const handleCancelAppointment = async () => {
+    if (!appointmentToCancel) return
+
+    try {
+      await updateAppointment({
+        ...appointmentToCancel,
+        status: "CANCELLED"
+      })
+      toast.success("Appointment cancelled successfully")
+      setAppointmentToCancel(null)
+      setIsDialogOpen(false)
+    } catch (error) {
+      toast.error("Failed to cancel appointment")
+    }
+  }
+
+  const isAppointmentCancellable = (appointment: Appointment) => {
+    return appointment.status === "SCHEDULED" && 
+           new Date(appointment.appointmentDate) > new Date()
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Appointments</h2>
-        <Button onClick={toggleSort} variant="outline" size="sm">
-          {sortOrder === "desc" ? (
-            <SortDescIcon className="mr-2 h-4 w-4" />
-          ) : (
-            <SortAscIcon className="mr-2 h-4 w-4" />
-          )}
-          Sort {sortOrder === "desc" ? "Newest" : "Oldest"}
-        </Button>
+        <div className="flex items-center gap-4">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as AppointmentStatus | "all")}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+              <SelectItem value="COMPLETED">Completed</SelectItem>
+              <SelectItem value="CANCELLED">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={toggleSort} variant="outline" size="sm">
+            {sortOrder === "desc" ? (
+              <SortDescIcon className="mr-2 h-4 w-4" />
+            ) : (
+              <SortAscIcon className="mr-2 h-4 w-4" />
+            )}
+            Sort {sortOrder === "desc" ? "Newest" : "Oldest"}
+          </Button>
+        </div>
       </div>
-      {sortedAppointments.map((appointment: Appointment) => (
-        <Card key={appointment.id}>
+
+      {filteredAndSortedAppointments.map((appointment: Appointment) => (
+        <Card 
+          key={appointment.id}
+          className={appointment.status === "COMPLETED" ? "border-primary/20 bg-primary/5" : ""}
+        >
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>{appointment.title}</span>
-              <Badge>{appointment.serviceType.name}</Badge>
+              <div className="flex items-center gap-2">
+                <span>{appointment.title}</span>
+                <Badge variant={getStatusVariant(appointment.status)}>
+                  {appointment.status === "COMPLETED" && <CheckCircleIcon className="mr-1 h-3 w-3" />}
+                  {appointment.status === "SCHEDULED" && <Clock3Icon className="mr-1 h-3 w-3" />}
+                  {appointment.status === "CANCELLED" && <XCircleIcon className="mr-1 h-3 w-3" />}
+                  {appointment.status.charAt(0) + appointment.status.slice(1).toLowerCase()}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{appointment.serviceType.name}</Badge>
+                {isAppointmentCancellable(appointment) && (
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => setAppointmentToCancel(appointment)}
+                      >
+                        Cancel
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Cancel Appointment</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to cancel this appointment? This action cannot be undone.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                            No, Keep it
+                          </Button>
+                        </DialogClose>
+                        <Button 
+                          variant="destructive" 
+                          onClick={handleCancelAppointment}
+                        >
+                          Yes, Cancel Appointment
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>

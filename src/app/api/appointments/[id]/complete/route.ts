@@ -11,7 +11,7 @@ export async function PUT(
     const appointment = await prisma.appointment.update({
       where: { id: params.id },
       data: {
-        expirationDate: new Date(), // Set to current time to mark as completed
+        status: "COMPLETED",
       },
     })
 

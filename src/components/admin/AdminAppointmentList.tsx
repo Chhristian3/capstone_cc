@@ -30,27 +30,37 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
+import { type Appointment } from "@/contexts/AppointmentContext"
 
 type SortOption = "date-asc" | "date-desc" | "name-asc" | "name-desc"
-type FilterOption = "all" | "active" | "completed" | "expired"
+type FilterOption = "all" | "active" | "completed" | "cancelled"
 
 export function AdminAppointmentList() {
   const { allAppointments, refreshAppointments } = useAppointments()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortOption, setSortOption] = useState<SortOption>("date-desc")
   const [filterOption, setFilterOption] = useState<FilterOption>("all")
+  const [completingAppointments, setCompletingAppointments] = useState<Set<string>>(new Set())
 
   const markAppointmentCompleted = async (appointmentId: string) => {
     try {
+      setCompletingAppointments(prev => new Set([...Array.from(prev), appointmentId]))
       const response = await fetch(`/api/appointments/${appointmentId}/complete`, {
         method: "PUT",
       })
       if (!response.ok) {
         throw new Error("Failed to mark appointment as completed")
       }
-      refreshAppointments()
+      await refreshAppointments()
     } catch (error) {
       console.error("Error marking appointment as completed:", error)
+    } finally {
+      setCompletingAppointments(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(appointmentId)
+        return newSet
+      })
     }
   }
 
@@ -62,20 +72,13 @@ export function AdminAppointmentList() {
         appointment.customerName.toLowerCase().includes(searchQuery.toLowerCase())
 
       // Filter by status
-      const now = new Date()
-      const appointmentDate = new Date(appointment.appointmentDate)
-      const expirationDate = new Date(appointment.expirationDate)
-      const isCompleted = expirationDate < now
-      const isExpired = appointmentDate < now && !isCompleted
-      const isActive = appointmentDate >= now
-
       switch (filterOption) {
         case "active":
-          return matchesSearch && isActive
+          return matchesSearch && appointment.status === "SCHEDULED"
         case "completed":
-          return matchesSearch && isCompleted
-        case "expired":
-          return matchesSearch && isExpired
+          return matchesSearch && appointment.status === "COMPLETED"
+        case "cancelled":
+          return matchesSearch && appointment.status === "CANCELLED"
         default:
           return matchesSearch
       }
@@ -95,66 +98,102 @@ export function AdminAppointmentList() {
       }
     })
 
-  const getAppointmentStatus = (appointment: any) => {
-    const now = new Date()
-    const appointmentDate = new Date(appointment.appointmentDate)
-    const expirationDate = new Date(appointment.expirationDate)
-
-    if (expirationDate < now) {
-      return <Badge variant="default">Completed</Badge>
-    } else if (appointmentDate < now) {
-      return <Badge variant="destructive">Expired</Badge>
-    } else {
-      return <Badge variant="secondary">Active</Badge>
+  const getAppointmentStatus = (appointment: Appointment) => {
+    switch (appointment.status) {
+      case "COMPLETED":
+        return <Badge variant="default">Completed</Badge>
+      case "CANCELLED":
+        return <Badge variant="destructive">Cancelled</Badge>
+      case "SCHEDULED":
+        return <Badge variant="secondary">Scheduled</Badge>
+      default:
+        return <Badge variant="secondary">Unknown</Badge>
     }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex-1">
           <div className="relative">
-            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search appointments..."
-              className="pl-8"
+              className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
-        <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date-asc">Date (Oldest first)</SelectItem>
-            <SelectItem value="date-desc">Date (Newest first)</SelectItem>
-            <SelectItem value="name-asc">Name (A-Z)</SelectItem>
-            <SelectItem value="name-desc">Name (Z-A)</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterOption} onValueChange={(value) => setFilterOption(value as FilterOption)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All appointments</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="expired">Expired</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-asc">Date (Oldest first)</SelectItem>
+              <SelectItem value="date-desc">Date (Newest first)</SelectItem>
+              <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterOption} onValueChange={(value) => setFilterOption(value as FilterOption)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All appointments</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4">
-        {filteredAndSortedAppointments.map((appointment) => (
-          <Card key={appointment.id}>
+        {!allAppointments.length ? (
+          <>
+            <Card className="animate-pulse">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-[200px]" />
+                  <Skeleton className="h-4 w-[150px]" />
+                </div>
+                <Skeleton className="h-5 w-[100px]" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[250px]" />
+                  <Skeleton className="h-4 w-[200px]" />
+                  <Skeleton className="h-4 w-[150px]" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="animate-pulse">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-[180px]" />
+                  <Skeleton className="h-4 w-[130px]" />
+                </div>
+                <Skeleton className="h-5 w-[100px]" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[220px]" />
+                  <Skeleton className="h-4 w-[180px]" />
+                  <Skeleton className="h-4 w-[140px]" />
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : filteredAndSortedAppointments.map((appointment) => (
+          <Card key={appointment.id} className="transition-shadow hover:shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
-                <CardTitle>{appointment.title}</CardTitle>
+                <CardTitle className="text-xl">{appointment.title}</CardTitle>
                 <CardDescription>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 text-sm">
                     <UserIcon className="h-4 w-4" />
                     {appointment.customerName}
                   </div>
@@ -163,22 +202,23 @@ export function AdminAppointmentList() {
               {getAppointmentStatus(appointment)}
             </CardHeader>
             <CardContent>
-              <div className="grid gap-2">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span>
+              <div className="grid gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
                     {format(new Date(appointment.appointmentDate), "PPP")}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <ClockIcon className="h-4 w-4" />
-                  <span>
-                    {format(new Date(appointment.appointmentDate), "p")} -{" "}
+                <div className="flex items-center gap-2 text-sm">
+                  <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
                     {format(new Date(appointment.appointmentEndDate), "p")}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">{appointment.serviceType.name}</Badge>
+                  <Badge variant="outline" className="rounded-md">
+                    {appointment.serviceType.name}
+                  </Badge>
                 </div>
                 {appointment.description && (
                   <>
@@ -194,10 +234,23 @@ export function AdminAppointmentList() {
                     variant="outline"
                     size="sm"
                     onClick={() => markAppointmentCompleted(appointment.id)}
-                    disabled={new Date(appointment.expirationDate) < new Date()}
+                    disabled={
+                      appointment.status === "COMPLETED" ||
+                      appointment.status === "CANCELLED" ||
+                      completingAppointments.has(appointment.id)
+                    }
                   >
-                    <CheckCircleIcon className="mr-2 h-4 w-4" />
-                    Mark as Completed
+                    {completingAppointments.has(appointment.id) ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Completing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircleIcon className="mr-2 h-4 w-4" />
+                        Mark as Completed
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

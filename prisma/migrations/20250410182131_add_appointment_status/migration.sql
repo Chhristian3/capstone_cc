@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `appointments` ADD COLUMN `status` ENUM('ACTIVE', 'COMPLETED', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE';

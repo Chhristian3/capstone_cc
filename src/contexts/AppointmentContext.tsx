@@ -2,13 +2,15 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react"
 
-type Appointment = {
+export type Appointment = {
   id: string
   title: string
   customerName: string
   appointmentDate: string
+  appointmentEndDate: string
   expirationDate: string
   description?: string
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED"
   serviceType: {
     id: string
     name: string
@@ -24,6 +26,7 @@ type AppointmentContextType = {
   allAppointments: Appointment[]
   refreshAppointments: () => void
   addAppointment: (appointment: Omit<Appointment, "id">) => Promise<void>
+  updateAppointment: (appointment: Appointment) => Promise<void>
 }
 
 const AppointmentContext = createContext<AppointmentContextType | undefined>(
@@ -97,6 +100,25 @@ export function AppointmentProvider({
     }
   }
 
+  const updateAppointment = async (appointment: Appointment) => {
+    try {
+      const response = await fetch(`/api/appointments?id=${appointment.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(appointment),
+      })
+      if (!response.ok) {
+        throw new Error("Failed to update appointment")
+      }
+      await refreshAppointments()
+    } catch (error) {
+      console.error("Error updating appointment:", error)
+      throw error
+    }
+  }
+
   return (
     <AppointmentContext.Provider
       value={{
@@ -104,6 +126,7 @@ export function AppointmentProvider({
         allAppointments,
         refreshAppointments,
         addAppointment,
+        updateAppointment,
       }}
     >
       {children}
