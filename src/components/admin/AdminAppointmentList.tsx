@@ -10,6 +10,8 @@ import {
   FilterIcon,
   SearchIcon,
   UserIcon,
+  CheckIcon,
+  XCircleIcon,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -32,16 +34,32 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { type Appointment } from "@/contexts/AppointmentContext"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  DialogClose,
+} from "@/components/ui/dialog"
 
 type SortOption = "date-asc" | "date-desc" | "name-asc" | "name-desc"
-type FilterOption = "all" | "active" | "completed" | "cancelled"
+type FilterOption = "all" | "pending" | "active" | "completed" | "cancelled"
 
 export function AdminAppointmentList() {
-  const { allAppointments, refreshAppointments } = useAppointments()
+  const { allAppointments, refreshAppointments, updateAppointment } = useAppointments()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortOption, setSortOption] = useState<SortOption>("date-desc")
   const [filterOption, setFilterOption] = useState<FilterOption>("all")
   const [completingAppointments, setCompletingAppointments] = useState<Set<string>>(new Set())
+  const [approvingAppointments, setApprovingAppointments] = useState<Set<string>>(new Set())
+  const [cancellingAppointments, setCancellingAppointments] = useState<Set<string>>(new Set())
+  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null)
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
 
   const markAppointmentCompleted = async (appointmentId: string) => {
     try {
@@ -64,6 +82,56 @@ export function AdminAppointmentList() {
     }
   }
 
+  const handleApproveAppointment = async (appointmentId: string) => {
+    try {
+      setApprovingAppointments(prev => new Set([...Array.from(prev), appointmentId]))
+      const appointment = allAppointments.find(a => a.id === appointmentId)
+      if (!appointment) return
+
+      await updateAppointment({
+        ...appointment,
+        status: "SCHEDULED"
+      })
+      await refreshAppointments()
+    } catch (error) {
+      console.error("Error approving appointment:", error)
+    } finally {
+      setApprovingAppointments(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(appointmentId)
+        return newSet
+      })
+    }
+  }
+
+  const handleCancelAppointment = async () => {
+    if (!appointmentToCancel) return
+
+    try {
+      setCancellingAppointments(prev => new Set([...Array.from(prev), appointmentToCancel.id]))
+      await updateAppointment({
+        ...appointmentToCancel,
+        status: "CANCELLED"
+      })
+      await refreshAppointments()
+      setAppointmentToCancel(null)
+      setIsCancelDialogOpen(false)
+    } catch (error) {
+      console.error("Error cancelling appointment:", error)
+    } finally {
+      setCancellingAppointments(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(appointmentToCancel.id)
+        return newSet
+      })
+    }
+  }
+
+  const isAppointmentCancellable = (appointment: Appointment) => {
+    return (appointment.status === "PENDING" || appointment.status === "SCHEDULED") && 
+           new Date(appointment.appointmentDate) > new Date()
+  }
+
   const filteredAndSortedAppointments = allAppointments
     .filter((appointment) => {
       // Filter by search query
@@ -73,6 +141,8 @@ export function AdminAppointmentList() {
 
       // Filter by status
       switch (filterOption) {
+        case "pending":
+          return matchesSearch && appointment.status === "PENDING"
         case "active":
           return matchesSearch && appointment.status === "SCHEDULED"
         case "completed":
@@ -100,6 +170,8 @@ export function AdminAppointmentList() {
 
   const getAppointmentStatus = (appointment: Appointment) => {
     switch (appointment.status) {
+      case "PENDING":
+        return <Badge variant="secondary">Pending</Badge>
       case "COMPLETED":
         return <Badge variant="default">Completed</Badge>
       case "CANCELLED":
@@ -143,6 +215,7 @@ export function AdminAppointmentList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All appointments</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -229,29 +302,147 @@ export function AdminAppointmentList() {
                   </>
                 )}
                 <Separator className="my-2" />
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => markAppointmentCompleted(appointment.id)}
-                    disabled={
-                      appointment.status === "COMPLETED" ||
-                      appointment.status === "CANCELLED" ||
-                      completingAppointments.has(appointment.id)
-                    }
-                  >
-                    {completingAppointments.has(appointment.id) ? (
-                      <>
-                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        Completing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircleIcon className="mr-2 h-4 w-4" />
-                        Mark as Completed
-                      </>
-                    )}
-                  </Button>
+                <div className="flex justify-end gap-2">
+                  {appointment.status === "PENDING" && (
+                    <>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleApproveAppointment(appointment.id)}
+                        disabled={approvingAppointments.has(appointment.id)}
+                      >
+                        {approvingAppointments.has(appointment.id) ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Approving...
+                          </>
+                        ) : (
+                          <>
+                            <CheckIcon className="mr-2 h-4 w-4" />
+                            Approve
+                          </>
+                        )}
+                      </Button>
+                      {isAppointmentCancellable(appointment) && (
+                        <Dialog open={isCancelDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsCancelDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setAppointmentToCancel(appointment)
+                                setIsCancelDialogOpen(true)
+                              }}
+                              disabled={cancellingAppointments.has(appointment.id)}
+                            >
+                              {cancellingAppointments.has(appointment.id) ? (
+                                <>
+                                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                  Cancelling...
+                                </>
+                              ) : (
+                                <>
+                                  <XCircleIcon className="mr-2 h-4 w-4" />
+                                  Cancel
+                                </>
+                              )}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Cancel Appointment</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to cancel this appointment? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <DialogClose asChild>
+                                <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
+                                  No, Keep it
+                                </Button>
+                              </DialogClose>
+                              <Button
+                                variant="destructive"
+                                onClick={handleCancelAppointment}
+                              >
+                                Yes, Cancel Appointment
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </>
+                  )}
+                  {appointment.status === "SCHEDULED" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => markAppointmentCompleted(appointment.id)}
+                        disabled={completingAppointments.has(appointment.id)}
+                      >
+                        {completingAppointments.has(appointment.id) ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Completing...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircleIcon className="mr-2 h-4 w-4" />
+                            Mark as Completed
+                          </>
+                        )}
+                      </Button>
+                      {isAppointmentCancellable(appointment) && (
+                        <Dialog open={isCancelDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsCancelDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setAppointmentToCancel(appointment)
+                                setIsCancelDialogOpen(true)
+                              }}
+                              disabled={cancellingAppointments.has(appointment.id)}
+                            >
+                              {cancellingAppointments.has(appointment.id) ? (
+                                <>
+                                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                  Cancelling...
+                                </>
+                              ) : (
+                                <>
+                                  <XCircleIcon className="mr-2 h-4 w-4" />
+                                  Cancel
+                                </>
+                              )}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Cancel Appointment</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to cancel this appointment? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <DialogClose asChild>
+                                <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
+                                  No, Keep it
+                                </Button>
+                              </DialogClose>
+                              <Button
+                                variant="destructive"
+                                onClick={handleCancelAppointment}
+                              >
+                                Yes, Cancel Appointment
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>

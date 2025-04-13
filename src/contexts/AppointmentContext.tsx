@@ -10,7 +10,7 @@ export type Appointment = {
   appointmentEndDate: string
   expirationDate: string
   description?: string
-  status: "SCHEDULED" | "COMPLETED" | "CANCELLED"
+  status: "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED"
   serviceType: {
     id: string
     name: string

@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 
-type AppointmentStatus = "SCHEDULED" | "COMPLETED" | "CANCELLED"
+type AppointmentStatus = "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED"
 
 type Appointment = {
   id: string
@@ -63,6 +63,7 @@ export function AppointmentList() {
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all")
   const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [cancellingAppointments, setCancellingAppointments] = useState<Set<string>>(new Set())
 
   const filteredAndSortedAppointments = [...appointments]
     .filter((appointment) => statusFilter === "all" || appointment.status === statusFilter)
@@ -93,6 +94,7 @@ export function AppointmentList() {
     if (!appointmentToCancel) return
 
     try {
+      setCancellingAppointments(prev => new Set([...Array.from(prev), appointmentToCancel.id]))
       await updateAppointment({
         ...appointmentToCancel,
         status: "CANCELLED"
@@ -102,11 +104,17 @@ export function AppointmentList() {
       setIsDialogOpen(false)
     } catch (error) {
       toast.error("Failed to cancel appointment")
+    } finally {
+      setCancellingAppointments(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(appointmentToCancel.id)
+        return newSet
+      })
     }
   }
 
   const isAppointmentCancellable = (appointment: Appointment) => {
-    return appointment.status === "SCHEDULED" && 
+    return (appointment.status === "PENDING" || appointment.status === "SCHEDULED") && 
            new Date(appointment.appointmentDate) > new Date()
   }
 
@@ -159,14 +167,28 @@ export function AppointmentList() {
               <div className="flex items-center gap-2">
                 <Badge variant="outline">{appointment.serviceType.name}</Badge>
                 {isAppointmentCancellable(appointment) && (
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <Dialog open={isDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
                       <Button 
                         variant="destructive" 
                         size="sm"
-                        onClick={() => setAppointmentToCancel(appointment)}
+                        onClick={() => {
+                          setAppointmentToCancel(appointment)
+                          setIsDialogOpen(true)
+                        }}
+                        disabled={cancellingAppointments.has(appointment.id)}
                       >
-                        Cancel
+                        {cancellingAppointments.has(appointment.id) ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Cancelling...
+                          </>
+                        ) : (
+                          <>
+                            <XCircleIcon className="mr-2 h-4 w-4" />
+                            Cancel
+                          </>
+                        )}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
