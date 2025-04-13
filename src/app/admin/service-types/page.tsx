@@ -243,7 +243,7 @@ export default function ServiceTypesPage() {
           <DialogHeader>
             <DialogTitle>Delete Service Type</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{serviceTypeToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to delete &ldquo;{serviceTypeToDelete?.name}&rdquo;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
