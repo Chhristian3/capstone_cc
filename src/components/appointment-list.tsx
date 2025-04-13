@@ -13,6 +13,7 @@ import {
   XCircleIcon,
   Star,
   StarHalf,
+  CalendarPlusIcon,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -38,27 +39,10 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { FeedbackDialog } from "@/components/feedback-dialog"
+import { type Appointment, type RatingValue } from "@/contexts/AppointmentContext"
+import { AddAppointmentButton } from "@/components/buttons/add-appointment-button"
 
 type AppointmentStatus = "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED"
-
-type Appointment = {
-  id: string
-  title: string
-  customerName: string
-  appointmentDate: string
-  appointmentEndDate: string
-  expirationDate: string
-  description?: string
-  status: AppointmentStatus
-  serviceType: {
-    id: string
-    name: string
-  }
-  rating?: {
-    ratingValue: string
-    comment?: string
-  }
-}
 
 export function AppointmentList() {
   const { userAppointments: appointments, updateAppointment } = useAppointments()
@@ -122,11 +106,27 @@ export function AppointmentList() {
            new Date(appointment.appointmentDate) > new Date()
   }
 
+  function getRatingValue(rating: RatingValue): number {
+    switch (rating) {
+      case "VeryDissatisfied":
+        return 1
+      case "Dissatisfied":
+        return 2
+      case "Neutral":
+        return 3
+      case "Satisfied":
+        return 4
+      case "VerySatisfied":
+        return 5
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Appointments</h2>
         <div className="flex items-center gap-4">
+          <AddAppointmentButton />
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as AppointmentStatus | "all")}
@@ -295,6 +295,20 @@ export function AppointmentList() {
                   {Math.round((new Date(appointment.appointmentEndDate).getTime() - new Date(appointment.appointmentDate).getTime()) / (1000 * 60))} minutes
                 </p>
               </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarPlusIcon className="h-3.5 w-3.5" />
+                  <span>Created</span>
+                </div>
+                <p className="text-sm font-medium">
+                  {new Date(appointment.createdAt).toLocaleDateString(undefined, {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
             </div>
             {appointment.description && (
               <div className="space-y-1">
@@ -313,9 +327,23 @@ export function AppointmentList() {
                   <span>Feedback</span>
                 </div>
                 <div className="space-y-0.5">
-                  <Badge variant="outline" className="h-5 font-normal">
-                    {appointment.rating.ratingValue}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <Star
+                          key={value}
+                          className={`h-3.5 w-3.5 ${
+                            value <= getRatingValue(appointment.rating!.ratingValue)
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <Badge variant="outline" className="h-5 font-normal">
+                      {appointment.rating.ratingValue}
+                    </Badge>
+                  </div>
                   {appointment.rating.comment && (
                     <p className="text-sm text-muted-foreground">
                       {appointment.rating.comment}

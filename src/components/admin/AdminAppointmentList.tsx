@@ -12,6 +12,9 @@ import {
   UserIcon,
   CheckIcon,
   XCircleIcon,
+  Star,
+  Clock3Icon,
+  CalendarPlusIcon,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -33,7 +36,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { type Appointment } from "@/contexts/AppointmentContext"
+import { type Appointment, type RatingValue } from "@/contexts/AppointmentContext"
 import {
   Dialog,
   DialogContent,
@@ -49,6 +52,21 @@ import {
 
 type SortOption = "date-asc" | "date-desc" | "name-asc" | "name-desc"
 type FilterOption = "all" | "pending" | "scheduled" | "completed" | "cancelled"
+
+function getRatingValue(rating: RatingValue): number {
+  switch (rating) {
+    case "VeryDissatisfied":
+      return 1
+    case "Dissatisfied":
+      return 2
+    case "Neutral":
+      return 3
+    case "Satisfied":
+      return 4
+    case "VerySatisfied":
+      return 5
+  }
+}
 
 export function AdminAppointmentList() {
   const { allAppointments, refreshAppointments, updateAppointment } = useAppointments()
@@ -183,6 +201,17 @@ export function AdminAppointmentList() {
     }
   }
 
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "COMPLETED":
+        return "default"
+      case "CANCELLED":
+        return "destructive"
+      default:
+        return "secondary"
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -243,208 +272,212 @@ export function AdminAppointmentList() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="animate-pulse">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-[180px]" />
-                  <Skeleton className="h-4 w-[130px]" />
-                </div>
-                <Skeleton className="h-5 w-[100px]" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-[220px]" />
-                  <Skeleton className="h-4 w-[180px]" />
-                  <Skeleton className="h-4 w-[140px]" />
-                </div>
-              </CardContent>
-            </Card>
           </>
         ) : filteredAndSortedAppointments.map((appointment) => (
-          <Card key={appointment.id} className="transition-shadow hover:shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle className="text-xl">{appointment.title}</CardTitle>
-                <CardDescription>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <UserIcon className="h-4 w-4" />
-                    {appointment.customerName}
+          <Card 
+            key={appointment.id} 
+            className={`relative overflow-hidden transition-shadow hover:shadow-md ${
+              appointment.status === "COMPLETED" 
+                ? "border-primary/20 bg-primary/5" 
+                : appointment.status === "CANCELLED"
+                ? "border-destructive/20 bg-destructive/5"
+                : ""
+            }`}
+          >
+            <CardHeader className="space-y-2 pb-2">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg">{appointment.title}</CardTitle>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant={getStatusVariant(appointment.status)} className="h-5">
+                      {appointment.status === "COMPLETED" && <CheckCircleIcon className="mr-1 h-3 w-3" />}
+                      {appointment.status === "SCHEDULED" && <Clock3Icon className="mr-1 h-3 w-3" />}
+                      {appointment.status === "CANCELLED" && <XCircleIcon className="mr-1 h-3 w-3" />}
+                      {appointment.status.charAt(0) + appointment.status.slice(1).toLowerCase()}
+                    </Badge>
+                    <Badge variant="outline" className="h-5 font-normal">
+                      {appointment.serviceType.name}
+                    </Badge>
                   </div>
-                </CardDescription>
-              </div>
-              {getAppointmentStatus(appointment)}
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {format(new Date(appointment.appointmentDate), "PPP")}
-                  </span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <ClockIcon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {format(new Date(appointment.appointmentEndDate), "p")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="rounded-md">
-                    {appointment.serviceType.name}
-                  </Badge>
-                </div>
-                {appointment.description && (
-                  <>
-                    <Separator className="my-2" />
-                    <p className="text-sm text-muted-foreground">
-                      {appointment.description}
-                    </p>
-                  </>
-                )}
-                <Separator className="my-2" />
-                <div className="flex justify-end gap-2">
+                <div className="flex items-center gap-1.5">
                   {appointment.status === "PENDING" && (
-                    <>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleApproveAppointment(appointment.id)}
-                        disabled={approvingAppointments.has(appointment.id)}
-                      >
-                        {approvingAppointments.has(appointment.id) ? (
-                          <>
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            Approving...
-                          </>
-                        ) : (
-                          <>
-                            <CheckIcon className="mr-2 h-4 w-4" />
-                            Approve
-                          </>
-                        )}
-                      </Button>
-                      {isAppointmentCancellable(appointment) && (
-                        <Dialog open={isCancelDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsCancelDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => {
-                                setAppointmentToCancel(appointment)
-                                setIsCancelDialogOpen(true)
-                              }}
-                              disabled={cancellingAppointments.has(appointment.id)}
-                            >
-                              {cancellingAppointments.has(appointment.id) ? (
-                                <>
-                                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                  Cancelling...
-                                </>
-                              ) : (
-                                <>
-                                  <XCircleIcon className="mr-2 h-4 w-4" />
-                                  Cancel
-                                </>
-                              )}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Cancel Appointment</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to cancel this appointment? This action cannot be undone.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <DialogClose asChild>
-                                <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
-                                  No, Keep it
-                                </Button>
-                              </DialogClose>
-                              <Button
-                                variant="destructive"
-                                onClick={handleCancelAppointment}
-                              >
-                                Yes, Cancel Appointment
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleApproveAppointment(appointment.id)}
+                      disabled={approvingAppointments.has(appointment.id)}
+                    >
+                      {approvingAppointments.has(appointment.id) ? (
+                        <>
+                          <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          <CheckIcon className="mr-1.5 h-3.5 w-3.5" />
+                          Approve
+                        </>
                       )}
-                    </>
+                    </Button>
                   )}
                   {appointment.status === "SCHEDULED" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => markAppointmentCompleted(appointment.id)}
-                        disabled={completingAppointments.has(appointment.id)}
-                      >
-                        {completingAppointments.has(appointment.id) ? (
-                          <>
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            Completing...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircleIcon className="mr-2 h-4 w-4" />
-                            Mark as Completed
-                          </>
-                        )}
-                      </Button>
-                      {isAppointmentCancellable(appointment) && (
-                        <Dialog open={isCancelDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsCancelDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => {
-                                setAppointmentToCancel(appointment)
-                                setIsCancelDialogOpen(true)
-                              }}
-                              disabled={cancellingAppointments.has(appointment.id)}
-                            >
-                              {cancellingAppointments.has(appointment.id) ? (
-                                <>
-                                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                  Cancelling...
-                                </>
-                              ) : (
-                                <>
-                                  <XCircleIcon className="mr-2 h-4 w-4" />
-                                  Cancel
-                                </>
-                              )}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Cancel Appointment</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to cancel this appointment? This action cannot be undone.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <DialogClose asChild>
-                                <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
-                                  No, Keep it
-                                </Button>
-                              </DialogClose>
-                              <Button
-                                variant="destructive"
-                                onClick={handleCancelAppointment}
-                              >
-                                Yes, Cancel Appointment
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => markAppointmentCompleted(appointment.id)}
+                      disabled={completingAppointments.has(appointment.id)}
+                    >
+                      {completingAppointments.has(appointment.id) ? (
+                        <>
+                          <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          Completing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="mr-1.5 h-3.5 w-3.5" />
+                          Complete
+                        </>
                       )}
-                    </>
+                    </Button>
+                  )}
+                  {isAppointmentCancellable(appointment) && (
+                    <Dialog open={isCancelDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsCancelDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => {
+                            setAppointmentToCancel(appointment)
+                            setIsCancelDialogOpen(true)
+                          }}
+                          disabled={cancellingAppointments.has(appointment.id)}
+                        >
+                          {cancellingAppointments.has(appointment.id) ? (
+                            <>
+                              <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              Cancelling...
+                            </>
+                          ) : (
+                            <>
+                              <XCircleIcon className="mr-1.5 h-3.5 w-3.5" />
+                              Cancel
+                            </>
+                          )}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Cancel Appointment</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to cancel this appointment? This action cannot be undone.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
+                              No, Keep it
+                            </Button>
+                          </DialogClose>
+                          <Button 
+                            variant="destructive" 
+                            onClick={handleCancelAppointment}
+                          >
+                            Yes, Cancel Appointment
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </div>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">               
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    <span>Date</span>
+                  </div>
+                  <p className="text-sm font-medium">
+                    {format(new Date(appointment.appointmentDate), "PPP")}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <ClockIcon className="h-3.5 w-3.5" />
+                    <span>Time</span>
+                  </div>
+                  <p className="text-sm font-medium">
+                    {format(new Date(appointment.appointmentDate), "p")}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <UserIcon className="h-3.5 w-3.5" />
+                    <span>Customer</span>
+                  </div>
+                  <p className="text-sm font-medium">{appointment.customerName}</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock3Icon className="h-3.5 w-3.5" />
+                    <span>Duration</span>
+                  </div>
+                  <p className="text-sm font-medium">
+                    {Math.round((new Date(appointment.appointmentEndDate).getTime() - new Date(appointment.appointmentDate).getTime()) / (1000 * 60))} minutes
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CalendarPlusIcon className="h-3.5 w-3.5" />
+                    <span>Created</span>
+                  </div>
+                  <p className="text-sm font-medium">
+                    {format(new Date(appointment.createdAt), "PPP")}
+                  </p>
+                </div>
+              </div>
+              {appointment.description && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>Notes</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {appointment.description}
+                  </p>
+                </div>
+              )}
+              {appointment.status === "COMPLETED" && appointment.rating && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    <span>Customer Feedback</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <Star
+                          key={value}
+                          className={`h-3.5 w-3.5 ${
+                            value <= getRatingValue(appointment.rating!.ratingValue)
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <Badge variant="outline" className="h-5 font-normal">
+                      {appointment.rating.ratingValue}
+                    </Badge>
+                    {appointment.rating.comment && (
+                      <p className="text-sm text-muted-foreground">
+                        {appointment.rating.comment}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

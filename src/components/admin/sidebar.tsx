@@ -9,6 +9,7 @@ import {
   Users,
   Package,
 } from "lucide-react"
+import { ModeToggle } from "@/components/mode-toggle"
 
 const navigation = [
   {
@@ -38,8 +39,9 @@ export default function Sidebar() {
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-background">
-      <div className="flex h-14 items-center border-b px-4">
+      <div className="flex h-14 items-center justify-between border-b px-4">
         <h1 className="text-lg font-semibold">Admin Panel</h1>
+        <ModeToggle />
       </div>
       <nav className="flex-1 space-y-1 p-2">
         {navigation.map((item) => {

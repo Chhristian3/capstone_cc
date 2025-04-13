@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppointmentList } from "@/components/appointment-list"
 import { AddAppointmentButton } from "@/components/buttons/add-appointment-button"
-import { ModeToggle } from "@/components/mode-toggle"
+import { NotificationButton } from "@/components/buttons/notification-button"
 
 export default function Page() {
   return (
@@ -36,7 +36,7 @@ export default function Page() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <AddAppointmentButton />
+          <NotificationButton />
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
           <Suspense fallback={<AppointmentListSkeleton />}>

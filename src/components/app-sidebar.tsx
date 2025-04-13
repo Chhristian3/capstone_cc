@@ -30,7 +30,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUser()
-  const { userAppointments: appointments } = useAppointments()
+  const { allAppointments: appointments } = useAppointments()
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null)
 
   const bookedDates = appointments.map((app) => new Date(app.appointmentDate))
@@ -62,22 +62,58 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <DatePicker onSelect={handleDateSelect} bookedDates={bookedDates} />
         <SidebarSeparator className="mx-0" />
         <div className="px-4 py-2">
-          <h3 className="mb-2 text-lg font-semibold">Booked Dates</h3>
-          <ScrollArea className="h-[200px]">
-            {sortedBookedDates.map((dateString, index) => {
-              const date = new Date(dateString)
-              return (
-                <React.Fragment key={index}>
-                  {index > 0 && <Separator className="my-2" />}
-                  <div className="flex items-center py-1">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span>
-                      {date.toLocaleDateString()} - {date.toLocaleTimeString()}
-                    </span>
+          <h3 className="mb-3 text-lg font-semibold tracking-tight">All Booked Dates</h3>
+          <ScrollArea className="h-[200px] rounded-md border">
+            {sortedBookedDates.length === 0 ? (
+              <div className="flex h-full items-center justify-center p-4 text-sm text-muted-foreground">
+                No appointments scheduled yet
+              </div>
+            ) : (
+              <div className="space-y-2 p-2">
+                {Object.entries(
+                  sortedBookedDates.reduce((acc, dateString) => {
+                    const date = new Date(dateString)
+                    const dateKey = date.toLocaleDateString()
+                    if (!acc[dateKey]) {
+                      acc[dateKey] = []
+                    }
+                    acc[dateKey].push(date)
+                    return acc
+                  }, {} as Record<string, Date[]>)
+                ).map(([dateKey, dates], groupIndex) => (
+                  <div key={dateKey} className="space-y-1.5">
+                    {groupIndex > 0 && <Separator className="my-2" />}
+                    <div className="text-sm font-medium text-muted-foreground">
+                      {dateKey}
+                    </div>
+                    {dates.map((date, index) => {
+                      const appointment = appointments.find(
+                        (app) => new Date(app.appointmentDate).toISOString() === date.toISOString()
+                      )
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 rounded-md bg-muted/50 p-2 text-sm hover:bg-muted/80"
+                        >
+                          <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="flex flex-col">
+                            <span className="truncate">
+                              {date.toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })} - {appointment ? new Date(appointment.appointmentEndDate).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }) : ""}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                </React.Fragment>
-              )
-            })}
+                ))}
+              </div>
+            )}
           </ScrollArea>
         </div>
       </SidebarContent>

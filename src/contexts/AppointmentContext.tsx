@@ -2,23 +2,34 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react"
 
-export type Appointment = {
+export type RatingValue = "VeryDissatisfied" | "Dissatisfied" | "Neutral" | "Satisfied" | "VerySatisfied"
+export type AppointmentStatus = "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED"
+
+export interface ServiceType {
   id: string
+  name: string
+}
+
+export interface Rating {
+  ratingValue: RatingValue
+  comment?: string
+}
+
+export interface Appointment {
+  id: string
+  userId: string
   title: string
   customerName: string
   appointmentDate: string
   appointmentEndDate: string
   expirationDate: string
+  serviceTypeId: string
+  serviceType: ServiceType
   description?: string
-  status: "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED"
-  serviceType: {
-    id: string
-    name: string
-  }
-  rating?: {
-    ratingValue: string
-    comment?: string
-  }
+  status: AppointmentStatus
+  rating?: Rating
+  createdAt: string
+  updatedAt: string
 }
 
 type AppointmentContextType = {
