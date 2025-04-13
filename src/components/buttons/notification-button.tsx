@@ -10,34 +10,17 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { getNotifications, markAsRead, markAllAsRead } from "@/services/notifications"
-import { useEffect, useState } from "react"
+import { markAsRead, markAllAsRead } from "@/services/notifications"
 import { Notification } from "@prisma/client"
 import { formatDistanceToNow } from "date-fns"
+import { useNotifications } from "@/hooks/use-notifications"
 
 export function NotificationButton() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    async function fetchNotifications() {
-      try {
-        const data = await getNotifications({ isRead: false })
-        setNotifications(data)
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchNotifications()
-  }, [])
+  const { notifications, isLoading } = useNotifications()
 
   const handleNotificationClick = async (notification: Notification) => {
     try {
       await markAsRead(notification.id)
-      setNotifications(prev => prev.filter(n => n.id !== notification.id))
     } catch (error) {
       console.error("Failed to mark notification as read:", error)
     }
@@ -46,7 +29,6 @@ export function NotificationButton() {
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead()
-      setNotifications([])
     } catch (error) {
       console.error("Failed to mark all notifications as read:", error)
     }
