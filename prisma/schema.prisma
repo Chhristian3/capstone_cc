@@ -66,3 +66,30 @@ model Rating {
 
   @@map(name: "ratings")
 }
+
+enum NotificationType {
+  APPOINTMENT
+  CLIENT_ANNOUNCEMENT
+}
+
+enum NotificationRecipientType {
+  ALL_USERS
+  ADMIN_ONLY
+  CLIENT_ONLY
+  SPECIFIC_USER
+}
+
+model Notification {
+  id              String            @id @default(cuid())
+  userId          String?           // Optional - only used when recipientType is SPECIFIC_USER
+  recipientType   NotificationRecipientType @default(SPECIFIC_USER)
+  type            NotificationType
+  title           String            // e.g., "Appointment Status Updated" or "Important Announcement"
+  content         String            // The actual message content
+  referenceId     String?           @map(name: "reference_id")  // Optional ID for related entity
+  isRead          Boolean           @default(false) @map(name: "is_read")
+  createdAt       DateTime          @default(now()) @map(name: "created_at")
+  updatedAt       DateTime          @updatedAt @map(name: "updated_at")
+
+  @@map(name: "notifications")
+}

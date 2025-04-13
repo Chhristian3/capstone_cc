@@ -4,6 +4,37 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
+// Helper function to create notifications
+async function createAppointmentNotification(
+  appointmentId: string,
+  userId: string,
+  status: string,
+  customerName: string
+) {
+  // Create notification for the client
+  await prisma.notification.create({
+    data: {
+      userId,
+      recipientType: "SPECIFIC_USER",
+      type: "APPOINTMENT",
+      title: "Appointment Status Updated",
+      content: `Your appointment with ${customerName} has been updated to ${status}`,
+      referenceId: appointmentId,
+    },
+  })
+
+  // Create notification for admins
+  await prisma.notification.create({
+    data: {
+      recipientType: "ADMIN_ONLY",
+      type: "APPOINTMENT",
+      title: "Appointment Status Updated",
+      content: `Appointment for ${customerName} has been updated to ${status}`,
+      referenceId: appointmentId,
+    },
+  })
+}
+
 export async function POST(req: NextRequest) {
   const { userId } = getAuth(req)
 
@@ -126,6 +157,18 @@ export async function PUT(req: NextRequest) {
       )
     }
 
+    // Get the current appointment to check if status is changing
+    const currentAppointment = await prisma.appointment.findUnique({
+      where: { id },
+    })
+
+    if (!currentAppointment) {
+      return NextResponse.json(
+        { error: "Appointment not found" },
+        { status: 404 }
+      )
+    }
+
     const updatedAppointment = await prisma.appointment.update({
       where: { id },
       data: {
@@ -142,6 +185,16 @@ export async function PUT(req: NextRequest) {
         rating: true,
       },
     })
+
+    // Create notifications if status has changed
+    if (currentAppointment.status !== body.status) {
+      await createAppointmentNotification(
+        id,
+        currentAppointment.userId,
+        body.status,
+        currentAppointment.customerName
+      )
+    }
 
     return NextResponse.json(updatedAppointment)
   } catch (error) {
