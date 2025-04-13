@@ -132,6 +132,7 @@ export function AppointmentList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="PENDING">Pending</SelectItem>
               <SelectItem value="SCHEDULED">Scheduled</SelectItem>
               <SelectItem value="COMPLETED">Completed</SelectItem>
               <SelectItem value="CANCELLED">Cancelled</SelectItem>

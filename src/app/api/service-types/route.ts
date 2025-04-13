@@ -3,41 +3,46 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const id = searchParams.get("id")
+interface ServiceType {
+  id: string
+  name: string
+  description: string
+  appointments: any[] // You might want to type this more specifically
+}
 
-  if (id) {
-    try {
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get("id")
+
+    if (id) {
       const serviceType = await prisma.serviceType.findUnique({
         where: { id },
         include: { appointments: true },
       })
+
       if (!serviceType) {
         return NextResponse.json(
           { error: "Service type not found" },
           { status: 404 }
         )
       }
+
       return NextResponse.json(serviceType)
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Error fetching service type" },
-        { status: 500 }
-      )
     }
-  } else {
-    try {
-      const serviceTypes = await prisma.serviceType.findMany({
-        include: { appointments: true },
-      })
-      return NextResponse.json(serviceTypes)
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Error fetching service types" },
-        { status: 500 }
-      )
-    }
+
+    const serviceTypes = await prisma.serviceType.findMany({
+      include: { appointments: true },
+      orderBy: { name: "asc" },
+    })
+
+    return NextResponse.json(serviceTypes)
+  } catch (error) {
+    console.error("Error in GET /api/service-types:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
 

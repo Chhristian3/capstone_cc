@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/dialog"
 
 type SortOption = "date-asc" | "date-desc" | "name-asc" | "name-desc"
-type FilterOption = "all" | "pending" | "active" | "completed" | "cancelled"
+type FilterOption = "all" | "pending" | "scheduled" | "completed" | "cancelled"
 
 export function AdminAppointmentList() {
   const { allAppointments, refreshAppointments, updateAppointment } = useAppointments()
@@ -143,7 +143,7 @@ export function AdminAppointmentList() {
       switch (filterOption) {
         case "pending":
           return matchesSearch && appointment.status === "PENDING"
-        case "active":
+        case "scheduled":
           return matchesSearch && appointment.status === "SCHEDULED"
         case "completed":
           return matchesSearch && appointment.status === "COMPLETED"
@@ -216,7 +216,7 @@ export function AdminAppointmentList() {
             <SelectContent>
               <SelectItem value="all">All appointments</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
