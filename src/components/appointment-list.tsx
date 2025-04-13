@@ -11,6 +11,8 @@ import {
   CheckCircleIcon,
   Clock3Icon,
   XCircleIcon,
+  Star,
+  StarHalf,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +37,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { FeedbackDialog } from "@/components/feedback-dialog"
 
 type AppointmentStatus = "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED"
 
@@ -64,6 +67,7 @@ export function AppointmentList() {
   const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [cancellingAppointments, setCancellingAppointments] = useState<Set<string>>(new Set())
+  const [feedbackAppointmentId, setFeedbackAppointmentId] = useState<string | null>(null)
 
   const filteredAndSortedAppointments = [...appointments]
     .filter((appointment) => statusFilter === "all" || appointment.status === statusFilter)
@@ -152,21 +156,31 @@ export function AppointmentList() {
       {filteredAndSortedAppointments.map((appointment: Appointment) => (
         <Card 
           key={appointment.id}
-          className={appointment.status === "COMPLETED" ? "border-primary/20 bg-primary/5" : ""}
+          className={`relative overflow-hidden ${
+            appointment.status === "COMPLETED" 
+              ? "border-primary/20 bg-primary/5" 
+              : appointment.status === "CANCELLED"
+              ? "border-destructive/20 bg-destructive/5"
+              : ""
+          }`}
         >
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span>{appointment.title}</span>
-                <Badge variant={getStatusVariant(appointment.status)}>
-                  {appointment.status === "COMPLETED" && <CheckCircleIcon className="mr-1 h-3 w-3" />}
-                  {appointment.status === "SCHEDULED" && <Clock3Icon className="mr-1 h-3 w-3" />}
-                  {appointment.status === "CANCELLED" && <XCircleIcon className="mr-1 h-3 w-3" />}
-                  {appointment.status.charAt(0) + appointment.status.slice(1).toLowerCase()}
-                </Badge>
+          <CardHeader className="space-y-2 pb-2">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-lg">{appointment.title}</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant={getStatusVariant(appointment.status)} className="h-5">
+                    {appointment.status === "COMPLETED" && <CheckCircleIcon className="mr-1 h-3 w-3" />}
+                    {appointment.status === "SCHEDULED" && <Clock3Icon className="mr-1 h-3 w-3" />}
+                    {appointment.status === "CANCELLED" && <XCircleIcon className="mr-1 h-3 w-3" />}
+                    {appointment.status.charAt(0) + appointment.status.slice(1).toLowerCase()}
+                  </Badge>
+                  <Badge variant="outline" className="h-5 font-normal">
+                    {appointment.serviceType.name}
+                  </Badge>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{appointment.serviceType.name}</Badge>
+              <div className="flex items-center gap-1.5">
                 {isAppointmentCancellable(appointment) && (
                   <Dialog open={isDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
@@ -181,12 +195,12 @@ export function AppointmentList() {
                       >
                         {cancellingAppointments.has(appointment.id) ? (
                           <>
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                             Cancelling...
                           </>
                         ) : (
                           <>
-                            <XCircleIcon className="mr-2 h-4 w-4" />
+                            <XCircleIcon className="mr-1.5 h-3.5 w-3.5" />
                             Cancel
                           </>
                         )}
@@ -215,54 +229,109 @@ export function AppointmentList() {
                     </DialogContent>
                   </Dialog>
                 )}
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <CalendarIcon className="h-4 w-4 opacity-70" />
-                <span className="text-sm text-muted-foreground">
-                  {new Date(appointment.appointmentDate).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <ClockIcon className="h-4 w-4 opacity-70" />
-                <span className="text-sm text-muted-foreground">
-                  {new Date(appointment.appointmentDate).toLocaleTimeString()}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <UserIcon className="h-4 w-4 opacity-70" />
-                <span className="text-sm text-muted-foreground">
-                  {appointment.customerName}
-                </span>
+                {appointment.status === "COMPLETED" && (
+                  <div className="flex items-center gap-1.5">
+                    {appointment.rating ? (
+                      <div className="flex items-center gap-1 rounded-md border bg-background px-1.5 py-0.5 text-xs text-muted-foreground">
+                        <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                        <span>Rated</span>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFeedbackAppointmentId(appointment.id)}
+                      >
+                        <Star className="mr-1.5 h-3.5 w-3.5" />
+                        Leave Feedback
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-            <Separator className="my-2" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  <span>Date</span>
+                </div>
+                <p className="text-sm font-medium">
+                  {new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <ClockIcon className="h-3.5 w-3.5" />
+                  <span>Time</span>
+                </div>
+                <p className="text-sm font-medium">
+                  {new Date(appointment.appointmentDate).toLocaleTimeString(undefined, {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <UserIcon className="h-3.5 w-3.5" />
+                  <span>Customer</span>
+                </div>
+                <p className="text-sm font-medium">{appointment.customerName}</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock3Icon className="h-3.5 w-3.5" />
+                  <span>Duration</span>
+                </div>
+                <p className="text-sm font-medium">
+                  {Math.round((new Date(appointment.appointmentEndDate).getTime() - new Date(appointment.appointmentDate).getTime()) / (1000 * 60))} minutes
+                </p>
+              </div>
+            </div>
             {appointment.description && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                {appointment.description}
-              </p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span>Notes</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {appointment.description}
+                </p>
+              </div>
             )}
             {appointment.rating && (
-              <>
-                <Separator className="my-2" />
-                <div className="mt-2">
-                  <Badge variant="outline">
-                    Rating: {appointment.rating.ratingValue}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                  <span>Feedback</span>
+                </div>
+                <div className="space-y-0.5">
+                  <Badge variant="outline" className="h-5 font-normal">
+                    {appointment.rating.ratingValue}
                   </Badge>
                   {appointment.rating.comment && (
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {appointment.rating.comment}
                     </p>
                   )}
                 </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
       ))}
+      <FeedbackDialog
+        appointmentId={feedbackAppointmentId || ""}
+        isOpen={!!feedbackAppointmentId}
+        onOpenChange={(open) => !open && setFeedbackAppointmentId(null)}
+      />
     </div>
   )
 }
