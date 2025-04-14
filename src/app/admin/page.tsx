@@ -80,7 +80,6 @@ export default async function AdminDashboard() {
               Welcome to your admin dashboard. Here you can manage appointments, service types, and users.
             </p>
           </div>
-          <ModeToggle />
         </div>
 
         {(!serviceTypes.length && !appointments.length && !users.length) && (
