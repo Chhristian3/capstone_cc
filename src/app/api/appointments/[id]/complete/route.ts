@@ -17,7 +17,7 @@ async function createAppointmentNotification(
       recipientType: "SPECIFIC_USER",
       type: "APPOINTMENT",
       title: "Appointment Status Updated",
-      content: `Your appointment with ${customerName} has been updated to ${status}`,
+      content: `Your appointment has been updated to ${status}`,
       referenceId: appointmentId,
     },
   })

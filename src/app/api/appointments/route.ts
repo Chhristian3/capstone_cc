@@ -18,7 +18,7 @@ async function createAppointmentNotification(
       recipientType: "SPECIFIC_USER",
       type: "APPOINTMENT",
       title: "Appointment Status Updated",
-      content: `Your appointment with ${customerName} has been updated to ${status}`,
+      content: `Your appointment has been updated to ${status}`,
       referenceId: appointmentId,
     },
   })
@@ -109,6 +109,18 @@ export async function POST(req: NextRequest) {
         rating: true,
       },
     })
+
+    // Create notification for admins about the new appointment
+    await prisma.notification.create({
+      data: {
+        recipientType: "ADMIN_ONLY",
+        type: "APPOINTMENT",
+        title: "New Appointment Created",
+        content: `New appointment created for ${body.customerName} on ${newAppointmentStart.toLocaleDateString()}`,
+        referenceId: appointment.id,
+      },
+    })
+
     return NextResponse.json(appointment, { status: 201 })
   } catch (error) {
     console.error("Error creating appointment:", error)

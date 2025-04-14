@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
+import { auth } from "@clerk/nextjs/server"
+import { checkRole } from "@/lib/roles"
 
 const prisma = new PrismaClient()
 
@@ -10,6 +12,12 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get("userId")
     const recipientType = searchParams.get("recipientType")
     const isRead = searchParams.get("isRead")
+
+    // Get the current user's ID from the auth token
+    const { userId: currentUserId } = await auth()
+    if (!currentUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
     if (id) {
       const notification = await prisma.notification.findUnique({
@@ -23,13 +31,36 @@ export async function GET(req: NextRequest) {
         )
       }
 
+      // Check if user has access to this notification
+      const isAdmin = await checkRole("admin")
+      if (!isAdmin && notification.recipientType !== "ALL_USERS") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
+
       return NextResponse.json(notification)
     }
 
-    // Build the where clause based on query parameters
+    // Build the where clause based on query parameters and user role
     const where: any = {}
-    if (userId) where.userId = userId
-    if (recipientType) where.recipientType = recipientType
+    const isAdmin = await checkRole("admin")
+
+    if (!isAdmin) {
+      // For non-admin users, they can only see:
+      // 1. Notifications specifically for them
+      // 2. Notifications for ALL users
+      where.OR = [
+        { userId: currentUserId },
+        { recipientType: "ALL_USERS"},
+        { recipientType: "CLIENT_ONLY"}
+      ]
+    } else {
+      // Admins can only see ADMIN_ONLY and ALL_USERS notifications
+      where.OR = [
+        { recipientType: "ADMIN_ONLY" },
+        { recipientType: "ALL_USERS" }
+      ]
+    }
+
     if (isRead !== null) where.isRead = isRead === "true"
 
     const notifications = await prisma.notification.findMany({
