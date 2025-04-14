@@ -58,7 +58,7 @@ export function NotificationButton() {
             No new notifications
           </div>
         ) : (
-          <>
+          <div className="p-2 overflow-y-auto max-h-[300px]">
             {notifications.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
@@ -95,7 +95,7 @@ export function NotificationButton() {
               <CheckIcon className="h-4 w-4" />
               Mark all as read
             </DropdownMenuItem>
-          </>
+          </div>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

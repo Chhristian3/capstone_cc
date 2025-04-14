@@ -32,11 +32,40 @@ export async function GET(req: NextRequest) {
     }
 
     const serviceTypes = await prisma.serviceType.findMany({
-      include: { appointments: true },
+      include: { 
+        appointments: {
+          include: {
+            rating: true
+          }
+        }
+      },
       orderBy: { name: "asc" },
     })
 
-    return NextResponse.json(serviceTypes)
+    // Calculate average rating for each service type
+    const serviceTypesWithRatings = serviceTypes.map(serviceType => {
+      const completedAppointments = serviceType.appointments.filter(a => a.status === "COMPLETED")
+      const totalRating = completedAppointments.reduce((acc, curr) => {
+        if (!curr.rating) return acc
+        return acc + (curr.rating.ratingValue === "VerySatisfied" ? 5 :
+                     curr.rating.ratingValue === "Satisfied" ? 4 :
+                     curr.rating.ratingValue === "Neutral" ? 3 :
+                     curr.rating.ratingValue === "Dissatisfied" ? 2 : 1)
+      }, 0)
+      
+      const averageRating = completedAppointments.length > 0 
+        ? totalRating / completedAppointments.length 
+        : 0
+
+      return {
+        ...serviceType,
+        averageRating,
+        totalAppointments: serviceType.appointments.length,
+        completedAppointments: completedAppointments.length
+      }
+    })
+
+    return NextResponse.json(serviceTypesWithRatings)
   } catch (error) {
     console.error("Error in GET /api/service-types:", error)
     return NextResponse.json(

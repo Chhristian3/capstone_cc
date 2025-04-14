@@ -21,12 +21,16 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Star } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 interface ServiceType {
   id: string
   name: string
   description: string
+  averageRating: number
+  totalAppointments: number
+  completedAppointments: number
 }
 
 export default function ServiceTypesPage() {
@@ -199,22 +203,52 @@ export default function ServiceTypesPage() {
         />
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold">Name</TableHead>
+              <TableHead className="font-semibold">Description</TableHead>
+              <TableHead className="font-semibold text-center">Appointments</TableHead>
+              <TableHead className="font-semibold text-center">Completed</TableHead>
+              <TableHead className="font-semibold text-center">Rating</TableHead>
+              <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredServiceTypes.map((serviceType) => (
-              <TableRow key={serviceType.id}>
-                <TableCell>{serviceType.name}</TableCell>
-                <TableCell>{serviceType.description}</TableCell>
+              <TableRow key={serviceType.id} className="hover:bg-muted/50">
+                <TableCell className="font-medium">{serviceType.name}</TableCell>
+                <TableCell className="max-w-[300px] truncate">{serviceType.description}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="outline">{serviceType.totalAppointments}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="secondary">{serviceType.completedAppointments}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  {serviceType.completedAppointments > 0 ? (
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="font-medium">{serviceType.averageRating.toFixed(1)}</span>
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < Math.round(serviceType.averageRating)
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">No ratings</span>
+                  )}
+                </TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
+                  <div className="flex justify-end gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
