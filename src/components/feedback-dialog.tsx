@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { useAppointments } from "@/contexts/AppointmentContext"
 
 type RatingValue = "VeryDissatisfied" | "Dissatisfied" | "Neutral" | "Satisfied" | "VerySatisfied"
 
@@ -32,6 +33,7 @@ interface FeedbackDialogProps {
 }
 
 export function FeedbackDialog({ appointmentId, isOpen, onOpenChange }: FeedbackDialogProps) {
+  const { userAppointments, updateAppointment } = useAppointments()
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -62,6 +64,20 @@ export function FeedbackDialog({ appointmentId, isOpen, onOpenChange }: Feedback
       }
 
       const data = await response.json()
+      
+      // Find the appointment in the current list
+      const appointment = userAppointments.find(a => a.id === appointmentId)
+      if (appointment) {
+        // Update the appointment with the new rating
+        await updateAppointment({
+          ...appointment,
+          rating: {
+            ratingValue: ratingMap[rating],
+            comment: comment || undefined
+          }
+        })
+      }
+
       toast.success("Feedback submitted successfully")
       onOpenChange(false)
     } catch (error) {

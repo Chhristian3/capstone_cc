@@ -49,8 +49,9 @@ export function AppointmentList() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all")
   const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [openCancelDialogId, setOpenCancelDialogId] = useState<string | null>(null)
   const [cancellingAppointments, setCancellingAppointments] = useState<Set<string>>(new Set())
+  const [completingAppointments, setCompletingAppointments] = useState<Set<string>>(new Set())
   const [feedbackAppointmentId, setFeedbackAppointmentId] = useState<string | null>(null)
 
   const filteredAndSortedAppointments = [...appointments]
@@ -89,13 +90,41 @@ export function AppointmentList() {
       })
       toast.success("Appointment cancelled successfully")
       setAppointmentToCancel(null)
-      setIsDialogOpen(false)
+      setOpenCancelDialogId(null)
     } catch (error) {
       toast.error("Failed to cancel appointment")
     } finally {
       setCancellingAppointments(prev => {
         const newSet = new Set(prev)
         newSet.delete(appointmentToCancel.id)
+        return newSet
+      })
+    }
+  }
+
+  const handleCompleteAppointment = async (appointmentId: string) => {
+    try {
+      setCompletingAppointments(prev => new Set([...Array.from(prev), appointmentId]))
+      const response = await fetch(`/api/appointments/${appointmentId}/complete`, {
+        method: "PUT",
+      })
+      if (!response.ok) {
+        throw new Error("Failed to mark appointment as completed")
+      }
+      const appointment = appointments.find(a => a.id === appointmentId)
+      if (appointment) {
+        await updateAppointment({
+          ...appointment,
+          status: "COMPLETED"
+        })
+      }
+    } catch (error) {
+      console.error("Error marking appointment as completed:", error)
+      toast.error("Failed to complete appointment")
+    } finally {
+      setCompletingAppointments(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(appointmentId)
         return newSet
       })
     }
@@ -181,15 +210,43 @@ export function AppointmentList() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
+                {appointment.status === "SCHEDULED" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCompleteAppointment(appointment.id)}
+                    disabled={completingAppointments.has(appointment.id)}
+                  >
+                    {completingAppointments.has(appointment.id) ? (
+                      <>
+                        <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Completing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircleIcon className="mr-1.5 h-3.5 w-3.5" />
+                        Complete
+                      </>
+                    )}
+                  </Button>
+                )}
                 {isAppointmentCancellable(appointment) && (
-                  <Dialog open={isDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsDialogOpen}>
+                  <Dialog 
+                    open={openCancelDialogId === appointment.id} 
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setOpenCancelDialogId(null)
+                        setAppointmentToCancel(null)
+                      }
+                    }}
+                  >
                     <DialogTrigger asChild>
                       <Button 
                         variant="destructive" 
                         size="sm"
                         onClick={() => {
                           setAppointmentToCancel(appointment)
-                          setIsDialogOpen(true)
+                          setOpenCancelDialogId(appointment.id)
                         }}
                         disabled={cancellingAppointments.has(appointment.id)}
                       >
@@ -215,7 +272,7 @@ export function AppointmentList() {
                       </DialogHeader>
                       <DialogFooter>
                         <DialogClose asChild>
-                          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                          <Button variant="outline">
                             No, Keep it
                           </Button>
                         </DialogClose>
