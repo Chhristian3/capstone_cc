@@ -8,6 +8,7 @@ import {
   Calendar,
   Users,
   Package,
+  BarChart,
 } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 
@@ -31,6 +32,11 @@ const navigation = [
     name: "Users",
     href: "/admin/users",
     icon: Users,
+  },
+  {
+    name: "Reports",
+    href: "/admin/reports",
+    icon: BarChart,
   },
 ]
 
