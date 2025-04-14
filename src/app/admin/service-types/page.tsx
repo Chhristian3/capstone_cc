@@ -244,7 +244,7 @@ export default function ServiceTypesPage() {
                       </div>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground">No ratings</span>
+                    <span className="text-muted-foreground">&quot;No ratings&quot;</span>
                   )}
                 </TableCell>
                 <TableCell>
@@ -277,7 +277,7 @@ export default function ServiceTypesPage() {
           <DialogHeader>
             <DialogTitle>Delete Service Type</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{serviceTypeToDelete?.name}&rdquo;? This action cannot be undone.
+              Are you sure you want to delete &quot;{serviceTypeToDelete?.name}&rdquo;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
