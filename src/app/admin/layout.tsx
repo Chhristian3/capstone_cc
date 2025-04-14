@@ -18,8 +18,7 @@ export default async function AdminLayout({
     <div className="flex h-screen">
       <Sidebar />
       <div className="flex flex-col flex-1">
-        <header className="sticky top-0 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background px-4 z-50">
-          <AdminBreadcrumb />
+        <header className="sticky top-0 flex h-16 shrink-0 items-center justify-end gap-2 border-b bg-background px-4 z-50">
           <NotificationButton />
         </header>
         <main className="flex-1 overflow-y-auto p-8">
