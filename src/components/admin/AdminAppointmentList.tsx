@@ -440,7 +440,7 @@ export function AdminAppointmentList() {
                       </DialogContent>
                     </Dialog>
                   )}
-                  {appointment.status === "COMPLETED" && appointment.userRemarks && !appointment.adminRemarks && (
+                  {appointment.status === "COMPLETED" && !appointment.adminRemarks && (
                     <Dialog open={isRemarksDialogOpen && appointmentToAddRemarks?.id === appointment.id} onOpenChange={setIsRemarksDialogOpen}>
                       <DialogTrigger asChild>
                         <Button
@@ -463,14 +463,16 @@ export function AdminAppointmentList() {
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <label htmlFor="userRemarks" className="text-sm font-medium">
-                              Client Remarks
-                            </label>
-                            <p className="text-sm text-muted-foreground">
-                              {appointment.userRemarks}
-                            </p>
-                          </div>
+                          {appointment.userRemarks && (
+                            <div className="space-y-2">
+                              <label htmlFor="userRemarks" className="text-sm font-medium">
+                                Client Remarks
+                              </label>
+                              <p className="text-sm text-muted-foreground">
+                                {appointment.userRemarks}
+                              </p>
+                            </div>
+                          )}
                           <div className="space-y-2">
                             <label htmlFor="adminRemarks" className="text-sm font-medium">
                               Your Remarks
