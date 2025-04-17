@@ -15,6 +15,7 @@ import {
   Star,
   Clock3Icon,
   CalendarPlusIcon,
+  MessageSquarePlus,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -79,23 +80,39 @@ export function AdminAppointmentList() {
   const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null)
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
+  const [appointmentToComplete, setAppointmentToComplete] = useState<Appointment | null>(null)
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
+  const [appointmentToAddRemarks, setAppointmentToAddRemarks] = useState<Appointment | null>(null)
+  const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false)
+  const [adminRemarks, setAdminRemarks] = useState("")
 
-  const markAppointmentCompleted = async (appointmentId: string) => {
+  const markAppointmentCompleted = async (appointment: Appointment) => {
     try {
-      setCompletingAppointments(prev => new Set([...Array.from(prev), appointmentId]))
-      const response = await fetch(`/api/appointments/${appointmentId}/complete`, {
+      setCompletingAppointments(prev => new Set([...Array.from(prev), appointment.id]))
+      const response = await fetch(`/api/appointments?id=${appointment.id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...appointment,
+          status: "COMPLETED",
+          adminRemarks,
+        }),
       })
       if (!response.ok) {
         throw new Error("Failed to mark appointment as completed")
       }
       await refreshAppointments()
+      setAppointmentToComplete(null)
+      setIsCompleteDialogOpen(false)
+      setAdminRemarks("")
     } catch (error) {
       console.error("Error marking appointment as completed:", error)
     } finally {
       setCompletingAppointments(prev => {
         const newSet = new Set(prev)
-        newSet.delete(appointmentId)
+        newSet.delete(appointment.id)
         return newSet
       })
     }
@@ -156,6 +173,30 @@ export function AdminAppointmentList() {
         newSet.delete(appointmentToCancel.id)
         return newSet
       })
+    }
+  }
+
+  const handleAddAdminRemarks = async (appointment: Appointment) => {
+    try {
+      const response = await fetch(`/api/appointments?id=${appointment.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...appointment,
+          adminRemarks,
+        }),
+      })
+      if (!response.ok) {
+        throw new Error("Failed to add admin remarks")
+      }
+      await refreshAppointments()
+      setAppointmentToAddRemarks(null)
+      setIsRemarksDialogOpen(false)
+      setAdminRemarks("")
+    } catch (error) {
+      console.error("Error adding admin remarks:", error)
     }
   }
 
@@ -336,24 +377,126 @@ export function AdminAppointmentList() {
                     </Button>
                   )}
                   {appointment.status === "SCHEDULED" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => markAppointmentCompleted(appointment.id)}
-                      disabled={completingAppointments.has(appointment.id)}
-                    >
-                      {completingAppointments.has(appointment.id) ? (
-                        <>
-                          <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                          Completing...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircleIcon className="mr-1.5 h-3.5 w-3.5" />
-                          Complete
-                        </>
-                      )}
-                    </Button>
+                    <Dialog open={isCompleteDialogOpen && appointmentToComplete?.id === appointment.id} onOpenChange={setIsCompleteDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setAppointmentToComplete(appointment)
+                            setIsCompleteDialogOpen(true)
+                          }}
+                          disabled={completingAppointments.has(appointment.id)}
+                        >
+                          {completingAppointments.has(appointment.id) ? (
+                            <>
+                              <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              Completing...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircleIcon className="mr-1.5 h-3.5 w-3.5" />
+                              Complete
+                            </>
+                          )}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Complete Appointment</DialogTitle>
+                          <DialogDescription>
+                            Add any remarks about the completed appointment.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <label htmlFor="remarks" className="text-sm font-medium">
+                              Admin Remarks
+                            </label>
+                            <textarea
+                              id="remarks"
+                              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="Enter any remarks about the completed appointment..."
+                              value={adminRemarks}
+                              onChange={(e) => setAdminRemarks(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="outline" onClick={() => setIsCompleteDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                          </DialogClose>
+                          <Button 
+                            variant="default" 
+                            onClick={() => appointmentToComplete && markAppointmentCompleted(appointmentToComplete)}
+                          >
+                            Complete Appointment
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                  {appointment.status === "COMPLETED" && appointment.userRemarks && !appointment.adminRemarks && (
+                    <Dialog open={isRemarksDialogOpen && appointmentToAddRemarks?.id === appointment.id} onOpenChange={setIsRemarksDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setAppointmentToAddRemarks(appointment)
+                            setIsRemarksDialogOpen(true)
+                          }}
+                        >
+                          <MessageSquarePlus className="mr-1.5 h-3.5 w-3.5" />
+                          Add Remarks
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Admin Remarks</DialogTitle>
+                          <DialogDescription>
+                            Add your remarks for this completed appointment.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <label htmlFor="userRemarks" className="text-sm font-medium">
+                              Client Remarks
+                            </label>
+                            <p className="text-sm text-muted-foreground">
+                              {appointment.userRemarks}
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <label htmlFor="adminRemarks" className="text-sm font-medium">
+                              Your Remarks
+                            </label>
+                            <textarea
+                              id="adminRemarks"
+                              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="Enter your remarks about the completed appointment..."
+                              value={adminRemarks}
+                              onChange={(e) => setAdminRemarks(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="outline" onClick={() => setIsRemarksDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                          </DialogClose>
+                          <Button 
+                            variant="default" 
+                            onClick={() => appointmentToAddRemarks && handleAddAdminRemarks(appointmentToAddRemarks)}
+                          >
+                            Save Remarks
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   )}
                   {isAppointmentCancellable(appointment) && (
                     <Dialog open={isCancelDialogOpen && appointmentToCancel?.id === appointment.id} onOpenChange={setIsCancelDialogOpen}>

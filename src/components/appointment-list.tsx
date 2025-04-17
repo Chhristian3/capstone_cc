@@ -54,6 +54,9 @@ export function AppointmentList() {
   const [completingAppointments, setCompletingAppointments] = useState<Set<string>>(new Set())
   const [feedbackAppointmentId, setFeedbackAppointmentId] = useState<string | null>(null)
   const [cancellationReason, setCancellationReason] = useState("")
+  const [appointmentToComplete, setAppointmentToComplete] = useState<Appointment | null>(null)
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
+  const [userRemarks, setUserRemarks] = useState("")
 
   const filteredAndSortedAppointments = [...appointments]
     .filter((appointment) => statusFilter === "all" || appointment.status === statusFilter)
@@ -105,29 +108,35 @@ export function AppointmentList() {
     }
   }
 
-  const handleCompleteAppointment = async (appointmentId: string) => {
+  const handleCompleteAppointment = async (appointment: Appointment) => {
     try {
-      setCompletingAppointments(prev => new Set([...Array.from(prev), appointmentId]))
-      const response = await fetch(`/api/appointments/${appointmentId}/complete`, {
+      setCompletingAppointments(prev => new Set([...Array.from(prev), appointment.id]))
+      const response = await fetch(`/api/appointments?id=${appointment.id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...appointment,
+          status: "COMPLETED",
+          userRemarks,
+        }),
       })
       if (!response.ok) {
         throw new Error("Failed to mark appointment as completed")
       }
-      const appointment = appointments.find(a => a.id === appointmentId)
-      if (appointment) {
-        await updateAppointment({
-          ...appointment,
-          status: "COMPLETED"
-        })
-      }
+      const updatedAppointment = await response.json()
+      await updateAppointment(updatedAppointment)
+      setAppointmentToComplete(null)
+      setIsCompleteDialogOpen(false)
+      setUserRemarks("")
     } catch (error) {
       console.error("Error marking appointment as completed:", error)
       toast.error("Failed to complete appointment")
     } finally {
       setCompletingAppointments(prev => {
         const newSet = new Set(prev)
-        newSet.delete(appointmentId)
+        newSet.delete(appointment.id)
         return newSet
       })
     }
@@ -214,24 +223,66 @@ export function AppointmentList() {
               </div>
               <div className="flex items-center gap-1.5">
                 {appointment.status === "SCHEDULED" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCompleteAppointment(appointment.id)}
-                    disabled={completingAppointments.has(appointment.id)}
-                  >
-                    {completingAppointments.has(appointment.id) ? (
-                      <>
-                        <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        Completing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircleIcon className="mr-1.5 h-3.5 w-3.5" />
-                        Complete
-                      </>
-                    )}
-                  </Button>
+                  <Dialog open={isCompleteDialogOpen && appointmentToComplete?.id === appointment.id} onOpenChange={setIsCompleteDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setAppointmentToComplete(appointment)
+                          setIsCompleteDialogOpen(true)
+                        }}
+                        disabled={completingAppointments.has(appointment.id)}
+                      >
+                        {completingAppointments.has(appointment.id) ? (
+                          <>
+                            <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            Completing...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircleIcon className="mr-1.5 h-3.5 w-3.5" />
+                            Complete
+                          </>
+                        )}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Complete Appointment</DialogTitle>
+                        <DialogDescription>
+                          Add any remarks about your completed appointment.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <label htmlFor="remarks" className="text-sm font-medium">
+                            Your Remarks
+                          </label>
+                          <textarea
+                            id="remarks"
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="Enter any remarks about your completed appointment..."
+                            value={userRemarks}
+                            onChange={(e) => setUserRemarks(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline" onClick={() => setIsCompleteDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                        </DialogClose>
+                        <Button 
+                          variant="default" 
+                          onClick={() => appointmentToComplete && handleCompleteAppointment(appointmentToComplete)}
+                        >
+                          Complete Appointment
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 )}
                 {isAppointmentCancellable(appointment) && (
                   <Dialog 
