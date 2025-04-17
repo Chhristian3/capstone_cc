@@ -46,6 +46,25 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const newAppointmentStart = new Date(body.appointmentDate)
     const newAppointmentEnd = new Date(body.appointmentEndDate)
+    const currentDate = new Date()
+    const maxDate = new Date()
+    maxDate.setDate(maxDate.getDate() + 30)
+
+    // Validate appointment date is not in the past
+    if (newAppointmentStart < currentDate) {
+      return NextResponse.json(
+        { error: "Cannot create appointments in the past" },
+        { status: 400 }
+      )
+    }
+
+    // Validate appointment date is not more than 30 days in the future
+    if (newAppointmentStart > maxDate) {
+      return NextResponse.json(
+        { error: "Cannot create appointments more than 30 days in advance" },
+        { status: 400 }
+      )
+    }
 
     // Check for conflicting appointments
     const conflictingAppointment = await prisma.appointment.findFirst({

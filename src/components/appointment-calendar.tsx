@@ -35,6 +35,34 @@ export function AppointmentCalendar({
     }
   }, [selectedDate, appointments])
 
+  const disabledDates = (date: Date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const maxDate = new Date()
+    maxDate.setDate(maxDate.getDate() + 30)
+    maxDate.setHours(23, 59, 59, 999)
+
+    return date < today || date > maxDate
+  }
+
+  const getDisabledDateMessage = (date: Date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const maxDate = new Date()
+    maxDate.setDate(maxDate.getDate() + 30)
+    maxDate.setHours(23, 59, 59, 999)
+
+    if (date < today) {
+      return "Cannot select past dates"
+    }
+    if (date > maxDate) {
+      return "Cannot select dates more than 30 days in advance"
+    }
+    return ""
+  }
+
   return (
     <div>
       <div className="flex justify-center">
@@ -47,7 +75,20 @@ export function AppointmentCalendar({
           modifiersStyles={{
             booked: { backgroundColor: "#00ffff33" },
           }}
+          disabled={disabledDates}
+          onDayClick={(day) => {
+            if (disabledDates(day)) {
+              const message = getDisabledDateMessage(day)
+              if (message) {
+                // You can use a toast notification here if you have one
+                alert(message)
+              }
+            }
+          }}
         />
+      </div>
+      <div className="mt-2 text-center text-sm text-muted-foreground">
+        <p>Dates in the past and more than 30 days in the future are disabled</p>
       </div>
       {selectedDate && (
         <div className="mt-4">

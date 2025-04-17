@@ -26,6 +26,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
+
+type FormData = {
+  title: string
+  appointmentDate: string
+  appointmentEndDate: string
+  serviceTypeId: string
+  description?: string
+}
 
 const formSchema = z
   .object({
@@ -46,17 +55,48 @@ const formSchema = z
       })
       .optional(),
   })
-  .refine(
-    (data) => {
-      const start = new Date(data.appointmentDate)
-      const end = new Date(data.appointmentEndDate)
-      return end > start && start.toDateString() === end.toDateString()
-    },
-    {
-      message: "End time must be after start time and on the same day",
-      path: ["appointmentEndDate"],
+  .superRefine((data: FormData, ctx: z.RefinementCtx) => {
+    const start = new Date(data.appointmentDate)
+    const end = new Date(data.appointmentEndDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const maxDate = new Date()
+    maxDate.setDate(maxDate.getDate() + 30)
+    maxDate.setHours(23, 59, 59, 999)
+
+    if (start < today) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Cannot create appointments in the past",
+        path: ["appointmentDate"],
+      })
     }
-  )
+
+    if (start > maxDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Cannot create appointments more than 30 days in advance",
+        path: ["appointmentDate"],
+      })
+    }
+
+    if (end <= start) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End time must be after start time",
+        path: ["appointmentEndDate"],
+      })
+    }
+
+    if (start.toDateString() !== end.toDateString()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Appointments must start and end on the same day",
+        path: ["appointmentEndDate"],
+      })
+    }
+  })
 
 async function getServiceTypes() {
   const res = await fetch("/api/service-types")
@@ -77,19 +117,39 @@ export function AddAppointmentForm({
 }: AddAppointmentFormProps) {
   const [serviceTypes, setServiceTypes] = useState<any[]>([])
   const { toast } = useToast()
-  const { addAppointment } = useAppointments()
   const { user } = useUser()
+  const { addAppointment } = useAppointments()
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      appointmentDate: "",
-      appointmentEndDate: "",
+      appointmentDate: selectedDate ? selectedDate.toISOString() : "",
+      appointmentEndDate: selectedDate ? new Date(selectedDate.getTime() + 60 * 60 * 1000).toISOString() : "", // Default 1 hour duration
       serviceTypeId: "",
       description: "",
     },
   })
+
+  // Watch for changes in appointmentDate to update appointmentEndDate
+  const startDate = form.watch("appointmentDate")
+  const endDate = form.watch("appointmentEndDate")
+
+  useEffect(() => {
+    if (startDate) {
+      const startDateTime = new Date(startDate)
+      const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000) // Default 1 hour duration
+      form.setValue("appointmentEndDate", endDateTime.toISOString())
+    }
+  }, [startDate, form])
+
+  useEffect(() => {
+    if (endDate) {
+      const endDateTime = new Date(endDate)
+      const startDateTime = new Date(endDateTime.getTime() - 60 * 60 * 1000) // Default 1 hour before
+      form.setValue("appointmentDate", startDateTime.toISOString())
+    }
+  }, [endDate, form])
 
   useEffect(() => {
     getServiceTypes().then(setServiceTypes).catch(console.error)
@@ -98,16 +158,33 @@ export function AddAppointmentForm({
   useEffect(() => {
     if (selectedDate) {
       const startDate = new Date(selectedDate)
-      startDate.setHours(9, 0, 0, 0) // Set default start time to 9:00 AM
+      startDate.setHours(8, 0, 0, 0) // Set start time to 8 AM
       const endDate = new Date(selectedDate)
-      endDate.setHours(10, 0, 0, 0) // Set default end time to 10:00 AM
-      form.setValue("appointmentDate", startDate.toISOString().slice(0, 16))
-      form.setValue("appointmentEndDate", endDate.toISOString().slice(0, 16))
+      endDate.setHours(9, 0, 0, 0) // Set end time to 9 AM
+      form.setValue("appointmentDate", startDate.toISOString())
+      form.setValue("appointmentEndDate", endDate.toISOString())
     }
   }, [selectedDate, form])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
+      // Validate the selected date is not disabled
+      if (selectedDate) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        const maxDate = new Date()
+        maxDate.setDate(maxDate.getDate() + 30)
+        maxDate.setHours(23, 59, 59, 999)
+
+        if (selectedDate < today) {
+          throw new Error("Cannot create appointments in the past")
+        }
+        if (selectedDate > maxDate) {
+          throw new Error("Cannot create appointments more than 30 days in advance")
+        }
+      }
+
       // @ts-ignore
       await addAppointment({
         ...values,
@@ -144,8 +221,8 @@ export function AddAppointmentForm({
     } catch (error: any) {
       console.error(error)
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error Creating Appointment",
+        description: error.message || "Failed to create appointment. Please try again.",
         variant: "destructive",
       })
     }
@@ -174,7 +251,17 @@ export function AddAppointmentForm({
             <FormItem>
               <FormLabel>Start Date and Time</FormLabel>
               <FormControl>
-                <Input type="datetime-local" {...field} />
+                <DateTimePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      field.onChange(date.toISOString())
+                      // Update end date automatically
+                      const endDate = new Date(date.getTime() + 60 * 60 * 1000) // 1 hour duration
+                      form.setValue("appointmentEndDate", endDate.toISOString())
+                    }
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -187,7 +274,18 @@ export function AddAppointmentForm({
             <FormItem>
               <FormLabel>End Date and Time</FormLabel>
               <FormControl>
-                <Input type="datetime-local" {...field} />
+                <DateTimePicker
+                  date={field.value ? new Date(field.value) : undefined}
+                  isEndDate={true}
+                  onSelect={(date) => {
+                    if (date) {
+                      field.onChange(date.toISOString())
+                      // Update start date automatically
+                      const startDate = new Date(date.getTime() - 60 * 60 * 1000) // 1 hour before
+                      form.setValue("appointmentDate", startDate.toISOString())
+                    }
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
