@@ -244,7 +244,7 @@ export default function ServiceTypesPage() {
                       </div>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground">&quot;No ratings&quot;</span>
+                    <span className="text-muted-foreground">{`"No ratings"`}</span>
                   )}
                 </TableCell>
                 <TableCell>
