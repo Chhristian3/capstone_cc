@@ -28,6 +28,7 @@ export interface Appointment {
   description?: string
   status: AppointmentStatus
   rating?: Rating
+  cancellationReason?: string
   createdAt: string
   updatedAt: string
 }

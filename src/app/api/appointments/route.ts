@@ -200,17 +200,28 @@ export async function PUT(req: NextRequest) {
       )
     }
 
+    const updateData: any = {
+      customerName: body.customerName,
+      appointmentDate: new Date(body.appointmentDate),
+      expirationDate: new Date(body.expirationDate),
+      status: body.status,
+      ...(body.status === "CANCELLED" && { cancellationReason: body.cancellationReason }),
+      serviceType: {
+        connect: { id: body.serviceTypeId },
+      },
+    }
+
+    // Add remarks if provided
+    if (body.adminRemarks !== undefined) {
+      updateData.adminRemarks = body.adminRemarks
+    }
+    if (body.userRemarks !== undefined) {
+      updateData.userRemarks = body.userRemarks
+    }
+
     const updatedAppointment = await prisma.appointment.update({
       where: { id },
-      data: {
-        customerName: body.customerName,
-        appointmentDate: new Date(body.appointmentDate),
-        expirationDate: new Date(body.expirationDate),
-        status: body.status,
-        serviceType: {
-          connect: { id: body.serviceTypeId },
-        },
-      },
+      data: updateData,
       include: {
         serviceType: true,
         rating: true,

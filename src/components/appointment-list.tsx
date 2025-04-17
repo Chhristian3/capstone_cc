@@ -53,6 +53,7 @@ export function AppointmentList() {
   const [cancellingAppointments, setCancellingAppointments] = useState<Set<string>>(new Set())
   const [completingAppointments, setCompletingAppointments] = useState<Set<string>>(new Set())
   const [feedbackAppointmentId, setFeedbackAppointmentId] = useState<string | null>(null)
+  const [cancellationReason, setCancellationReason] = useState("")
 
   const filteredAndSortedAppointments = [...appointments]
     .filter((appointment) => statusFilter === "all" || appointment.status === statusFilter)
@@ -80,17 +81,19 @@ export function AppointmentList() {
   }
 
   const handleCancelAppointment = async () => {
-    if (!appointmentToCancel) return
+    if (!appointmentToCancel || !cancellationReason) return
 
     try {
       setCancellingAppointments(prev => new Set([...Array.from(prev), appointmentToCancel.id]))
       await updateAppointment({
         ...appointmentToCancel,
-        status: "CANCELLED"
+        status: "CANCELLED",
+        cancellationReason
       })
       toast.success("Appointment cancelled successfully")
       setAppointmentToCancel(null)
       setOpenCancelDialogId(null)
+      setCancellationReason("")
     } catch (error) {
       toast.error("Failed to cancel appointment")
     } finally {
@@ -270,6 +273,21 @@ export function AppointmentList() {
                           Are you sure you want to cancel this appointment? This action cannot be undone.
                         </DialogDescription>
                       </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <label htmlFor="reason" className="text-sm font-medium">
+                            Reason for cancellation <span className="text-destructive">*</span>
+                          </label>
+                          <textarea
+                            id="reason"
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="Please provide a reason for cancelling this appointment..."
+                            value={cancellationReason}
+                            onChange={(e) => setCancellationReason(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
                       <DialogFooter>
                         <DialogClose asChild>
                           <Button variant="outline">
@@ -279,6 +297,7 @@ export function AppointmentList() {
                         <Button 
                           variant="destructive" 
                           onClick={handleCancelAppointment}
+                          disabled={!cancellationReason.trim()}
                         >
                           Yes, Cancel Appointment
                         </Button>
@@ -407,6 +426,16 @@ export function AppointmentList() {
                     </p>
                   )}
                 </div>
+              </div>
+            )}
+            {appointment.status === "CANCELLED" && appointment.cancellationReason && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span>Cancellation Reason</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {appointment.cancellationReason}
+                </p>
               </div>
             )}
           </CardContent>

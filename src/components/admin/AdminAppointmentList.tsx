@@ -78,6 +78,7 @@ export function AdminAppointmentList() {
   const [cancellingAppointments, setCancellingAppointments] = useState<Set<string>>(new Set())
   const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null)
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
+  const [cancellationReason, setCancellationReason] = useState("")
 
   const markAppointmentCompleted = async (appointmentId: string) => {
     try {
@@ -123,17 +124,30 @@ export function AdminAppointmentList() {
   }
 
   const handleCancelAppointment = async () => {
-    if (!appointmentToCancel) return
+    if (!appointmentToCancel || !cancellationReason) return
 
     try {
       setCancellingAppointments(prev => new Set([...Array.from(prev), appointmentToCancel.id]))
-      await updateAppointment({
-        ...appointmentToCancel,
-        status: "CANCELLED"
+      const response = await fetch(`/api/appointments?id=${appointmentToCancel.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...appointmentToCancel,
+          status: "CANCELLED",
+          cancellationReason,
+        }),
       })
+
+      if (!response.ok) {
+        throw new Error("Failed to cancel appointment")
+      }
+
       await refreshAppointments()
       setAppointmentToCancel(null)
       setIsCancelDialogOpen(false)
+      setCancellationReason("")
     } catch (error) {
       console.error("Error cancelling appointment:", error)
     } finally {
@@ -373,6 +387,21 @@ export function AdminAppointmentList() {
                             Are you sure you want to cancel this appointment? This action cannot be undone.
                           </DialogDescription>
                         </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <label htmlFor="reason" className="text-sm font-medium">
+                              Reason for cancellation <span className="text-destructive">*</span>
+                            </label>
+                            <textarea
+                              id="reason"
+                              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="Please provide a reason for cancelling this appointment..."
+                              value={cancellationReason}
+                              onChange={(e) => setCancellationReason(e.target.value)}
+                              required
+                            />
+                          </div>
+                        </div>
                         <DialogFooter>
                           <DialogClose asChild>
                             <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
@@ -382,6 +411,7 @@ export function AdminAppointmentList() {
                           <Button 
                             variant="destructive" 
                             onClick={handleCancelAppointment}
+                            disabled={!cancellationReason.trim()}
                           >
                             Yes, Cancel Appointment
                           </Button>
@@ -476,6 +506,16 @@ export function AdminAppointmentList() {
                       </p>
                     )}
                   </div>
+                </div>
+              )}
+              {appointment.status === "CANCELLED" && appointment.cancellationReason && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>Cancellation Reason</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {appointment.cancellationReason}
+                  </p>
                 </div>
               )}
             </CardContent>

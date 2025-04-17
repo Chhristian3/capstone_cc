@@ -3,6 +3,11 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
+interface CompleteAppointmentRequest {
+  adminRemarks?: string
+  userRemarks?: string
+}
+
 // Helper function to create notifications
 async function createAppointmentNotification(
   appointmentId: string,
@@ -39,6 +44,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const body = await req.json() as CompleteAppointmentRequest
+    const { adminRemarks, userRemarks } = body
+
     // Get the current appointment
     const currentAppointment = await prisma.appointment.findUnique({
       where: { id: params.id },
@@ -51,11 +59,21 @@ export async function PUT(
       )
     }
 
+    const updateData: any = {
+      status: "COMPLETED",
+    }
+
+    if (adminRemarks !== undefined) {
+      updateData.adminRemarks = adminRemarks
+    }
+
+    if (userRemarks !== undefined) {
+      updateData.userRemarks = userRemarks
+    }
+
     const appointment = await prisma.appointment.update({
       where: { id: params.id },
-      data: {
-        status: "COMPLETED",
-      },
+      data: updateData,
     })
 
     // Create notifications for the status change
