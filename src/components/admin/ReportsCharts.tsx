@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from "recharts"
+import { SentimentAnalytics } from "./SentimentAnalytics"
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -17,27 +18,52 @@ interface ChartData {
   value: number
 }
 
+interface SentimentData {
+  category: string
+  count: number
+  percentage: number
+}
+
 interface ReportsChartsProps {
   statusCounts: ChartData[]
   serviceTypeCounts: ChartData[]
   ratingCounts: ChartData[]
   totalAppointments: number
+  sentimentDistribution: SentimentData[]
+  averageSentimentScore: number
+  sentimentByService: Record<string, {
+    averageScore: number
+    distribution: SentimentData[]
+  }>
+  sentimentTrend: {
+    date: string
+    averageScore: number
+  }[]
 }
 
-export function ReportsCharts({ statusCounts, serviceTypeCounts, ratingCounts, totalAppointments }: ReportsChartsProps) {
+export function ReportsCharts({
+  statusCounts,
+  serviceTypeCounts,
+  ratingCounts,
+  totalAppointments,
+  sentimentDistribution,
+  averageSentimentScore,
+  sentimentByService,
+  sentimentTrend
+}: ReportsChartsProps) {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Reports & Analytics</h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Total Appointments</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{totalAppointments}</div>
+            <div className="text-2xl font-bold">{totalAppointments}</div>
           </CardContent>
         </Card>
       </div>
@@ -45,7 +71,7 @@ export function ReportsCharts({ statusCounts, serviceTypeCounts, ratingCounts, t
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Appointments by Status</CardTitle>
+            <CardTitle>Appointment Status</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -80,7 +106,7 @@ export function ReportsCharts({ statusCounts, serviceTypeCounts, ratingCounts, t
 
         <Card>
           <CardHeader>
-            <CardTitle>Appointments by Service Type</CardTitle>
+            <CardTitle>Service Type Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -126,6 +152,13 @@ export function ReportsCharts({ statusCounts, serviceTypeCounts, ratingCounts, t
           </CardContent>
         </Card>
       </div>
+
+      <SentimentAnalytics
+        sentimentDistribution={sentimentDistribution}
+        averageSentimentScore={averageSentimentScore}
+        sentimentByService={sentimentByService}
+        sentimentTrend={sentimentTrend}
+      />
     </div>
   )
 } 

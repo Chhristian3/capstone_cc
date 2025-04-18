@@ -55,6 +55,7 @@ import {
 
 type SortOption = "date-asc" | "date-desc" | "name-asc" | "name-desc"
 type FilterOption = "all" | "pending" | "scheduled" | "completed" | "cancelled"
+type SentimentFilter = "all" | "very_positive" | "positive" | "neutral" | "negative" | "very_negative"
 
 function getRatingValue(rating: RatingValue): number {
   switch (rating) {
@@ -76,6 +77,7 @@ export function AdminAppointmentList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortOption, setSortOption] = useState<SortOption>("date-desc")
   const [filterOption, setFilterOption] = useState<FilterOption>("all")
+  const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("all")
   const [completingAppointments, setCompletingAppointments] = useState<Set<string>>(new Set())
   const [approvingAppointments, setApprovingAppointments] = useState<Set<string>>(new Set())
   const [cancellingAppointments, setCancellingAppointments] = useState<Set<string>>(new Set())
@@ -207,6 +209,40 @@ export function AdminAppointmentList() {
            new Date(appointment.appointmentDate) > new Date()
   }
 
+  const getSentimentColor = (category: string) => {
+    switch (category) {
+      case "VERY_POSITIVE":
+        return "bg-green-600"
+      case "POSITIVE":
+        return "bg-green-500"
+      case "NEUTRAL":
+        return "bg-gray-500"
+      case "NEGATIVE":
+        return "bg-yellow-500"
+      case "VERY_NEGATIVE":
+        return "bg-red-500"
+      default:
+        return "bg-gray-300"
+    }
+  }
+
+  const getSentimentLabel = (category: string) => {
+    switch (category) {
+      case "VERY_POSITIVE":
+        return "Very Positive"
+      case "POSITIVE":
+        return "Positive"
+      case "NEUTRAL":
+        return "Neutral"
+      case "NEGATIVE":
+        return "Negative"
+      case "VERY_NEGATIVE":
+        return "Very Negative"
+      default:
+        return "No Sentiment"
+    }
+  }
+
   const filteredAndSortedAppointments = allAppointments
     .filter((appointment) => {
       // Filter by search query
@@ -215,18 +251,13 @@ export function AdminAppointmentList() {
         appointment.customerName.toLowerCase().includes(searchQuery.toLowerCase())
 
       // Filter by status
-      switch (filterOption) {
-        case "pending":
-          return matchesSearch && appointment.status === "PENDING"
-        case "scheduled":
-          return matchesSearch && appointment.status === "SCHEDULED"
-        case "completed":
-          return matchesSearch && appointment.status === "COMPLETED"
-        case "cancelled":
-          return matchesSearch && appointment.status === "CANCELLED"
-        default:
-          return matchesSearch
-      }
+      const matchesStatus = filterOption === "all" || appointment.status === filterOption.toUpperCase()
+
+      // Filter by sentiment
+      const matchesSentiment = sentimentFilter === "all" || 
+        (appointment.rating?.sentimentCategory?.toLowerCase() === sentimentFilter)
+
+      return matchesSearch && matchesStatus && matchesSentiment
     })
     .sort((a, b) => {
       switch (sortOption) {
@@ -307,6 +338,19 @@ export function AdminAppointmentList() {
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sentimentFilter} onValueChange={(value) => setSentimentFilter(value as SentimentFilter)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by sentiment" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sentiments</SelectItem>
+              <SelectItem value="very_positive">Very Positive</SelectItem>
+              <SelectItem value="positive">Positive</SelectItem>
+              <SelectItem value="neutral">Neutral</SelectItem>
+              <SelectItem value="negative">Negative</SelectItem>
+              <SelectItem value="very_negative">Very Negative</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -347,9 +391,6 @@ export function AdminAppointmentList() {
                       {appointment.status === "SCHEDULED" && <Clock3Icon className="mr-1 h-3 w-3" />}
                       {appointment.status === "CANCELLED" && <XCircleIcon className="mr-1 h-3 w-3" />}
                       {appointment.status.charAt(0) + appointment.status.slice(1).toLowerCase()}
-                    </Badge>
-                    <Badge variant="outline" className="h-5 font-normal">
-                      {appointment.serviceType.name}
                     </Badge>
                   </div>
                 </div>
@@ -670,6 +711,14 @@ export function AdminAppointmentList() {
                     <Badge variant="outline" className="h-5 font-normal">
                       {appointment.rating.ratingValue}
                     </Badge>
+                    {appointment.rating.sentimentCategory && (
+                      <Badge variant="outline" className="h-5 font-normal">
+                        <div className="flex items-center gap-1">
+                          <div className={`h-2 w-2 rounded-full ${getSentimentColor(appointment.rating.sentimentCategory)}`} />
+                          {getSentimentLabel(appointment.rating.sentimentCategory)}
+                        </div>
+                      </Badge>
+                    )}
                   </div>
                   {appointment.rating.comment && (
                     <p className="mt-2 text-sm text-muted-foreground">

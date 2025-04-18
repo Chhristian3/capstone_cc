@@ -41,6 +41,41 @@ async function getDashboardData() {
          curr.rating.ratingValue === "Dissatisfied" ? 2 : 1) : 0)
     }, 0) / (completedAppointments.length || 1)
 
+    // Calculate sentiment statistics
+    const sentimentStats = completedAppointments.reduce((acc, curr) => {
+      if (curr.rating?.sentimentCategory) {
+        acc[curr.rating.sentimentCategory] = (acc[curr.rating.sentimentCategory] || 0) + 1
+      }
+      return acc
+    }, {} as Record<string, number>)
+
+    const totalSentiments = Object.values(sentimentStats).reduce((a, b) => a + b, 0)
+    const sentimentDistribution = Object.entries(sentimentStats).map(([category, count]) => ({
+      category,
+      count,
+      percentage: totalSentiments > 0 ? (count / totalSentiments) * 100 : 0
+    }))
+
+    // Calculate average sentiment score
+    const averageSentimentScore = completedAppointments.reduce((acc, curr) => {
+      return acc + (curr.rating?.sentimentScore || 0)
+    }, 0) / (completedAppointments.length || 1)
+
+    // Calculate overall sentiment status
+    const positiveSentiments = (sentimentStats["VERY_POSITIVE"] || 0) + (sentimentStats["POSITIVE"] || 0)
+    const negativeSentiments = (sentimentStats["VERY_NEGATIVE"] || 0) + (sentimentStats["NEGATIVE"] || 0)
+    const neutralSentiments = sentimentStats["NEUTRAL"] || 0
+
+    const sentimentStatus = totalSentiments > 0
+      ? positiveSentiments / totalSentiments >= 0.7
+        ? "EXCELLENT"
+        : positiveSentiments / totalSentiments >= 0.5
+          ? "GOOD"
+          : negativeSentiments / totalSentiments >= 0.3
+            ? "NEEDS_ATTENTION"
+            : "NEUTRAL"
+      : "NO_DATA"
+
     return {
       serviceTypes: serviceTypes || [],
       appointments: appointments || [],
@@ -48,6 +83,10 @@ async function getDashboardData() {
       recentAppointments,
       averageRating,
       completedAppointments,
+      sentimentDistribution,
+      averageSentimentScore,
+      totalSentiments,
+      sentimentStatus
     }
   } catch (error) {
     console.error("Error fetching dashboard data:", error)
@@ -58,6 +97,10 @@ async function getDashboardData() {
       recentAppointments: [],
       averageRating: 0,
       completedAppointments: [],
+      sentimentDistribution: [],
+      averageSentimentScore: 0,
+      totalSentiments: 0,
+      sentimentStatus: "NO_DATA"
     }
   }
 }
@@ -69,7 +112,7 @@ export default async function AdminDashboard() {
       redirect("/")
     }
 
-    const { serviceTypes, appointments, users, recentAppointments, averageRating, completedAppointments } = await getDashboardData()
+    const { serviceTypes, appointments, users, recentAppointments, averageRating, completedAppointments, sentimentDistribution, averageSentimentScore, totalSentiments, sentimentStatus } = await getDashboardData()
 
     return (
       <div className="space-y-6 p-6">
@@ -92,7 +135,7 @@ export default async function AdminDashboard() {
           </Alert>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
@@ -138,6 +181,34 @@ export default async function AdminDashboard() {
               <div className="text-2xl font-bold">{averageRating.toFixed(1)}</div>
               <p className="text-xs text-muted-foreground">
                 Based on {completedAppointments.length} reviews
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Sentiment Status</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {sentimentStatus === "EXCELLENT" ? (
+                  <span className="text-green-600">Excellent</span>
+                ) : sentimentStatus === "GOOD" ? (
+                  <span className="text-green-500">Good</span>
+                ) : sentimentStatus === "NEUTRAL" ? (
+                  <span className="text-gray-500">Neutral</span>
+                ) : sentimentStatus === "NEEDS_ATTENTION" ? (
+                  <span className="text-yellow-500">Needs Attention</span>
+                ) : (
+                  <span className="text-gray-400">No Data</span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {sentimentStatus === "EXCELLENT" ? "Over 70% positive sentiment" :
+                 sentimentStatus === "GOOD" ? "Over 50% positive sentiment" :
+                 sentimentStatus === "NEUTRAL" ? "Mixed sentiment distribution" :
+                 sentimentStatus === "NEEDS_ATTENTION" ? "High negative sentiment detected" :
+                 "No sentiment data available"}
               </p>
             </CardContent>
           </Card>
@@ -211,6 +282,47 @@ export default async function AdminDashboard() {
                   })}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Sentiment Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">Average Sentiment Score</div>
+                  <div className="text-2xl font-bold">
+                    {averageSentimentScore.toFixed(2)}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {sentimentDistribution.map(({ category, count, percentage }) => (
+                    <div key={category} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-2 w-2 rounded-full" style={{
+                          backgroundColor: 
+                            category === "VERY_POSITIVE" ? "#22c55e" :
+                            category === "POSITIVE" ? "#4ade80" :
+                            category === "NEUTRAL" ? "#94a3b8" :
+                            category === "NEGATIVE" ? "#f87171" :
+                            "#ef4444"
+                        }} />
+                        <span className="text-sm capitalize">
+                          {category.toLowerCase().replace("_", " ")}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {count} ({percentage.toFixed(1)}%)
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Based on {totalSentiments} analyzed reviews
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
