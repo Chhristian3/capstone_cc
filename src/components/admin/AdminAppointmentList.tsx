@@ -270,8 +270,8 @@ export function AdminAppointmentList() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1">
           <div className="relative">
             <SearchIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -283,7 +283,7 @@ export function AdminAppointmentList() {
             />
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort by" />
@@ -312,40 +312,36 @@ export function AdminAppointmentList() {
 
       <div className="grid gap-4">
         {!allAppointments.length ? (
-          <>
-            <Card className="animate-pulse">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-[200px]" />
-                  <Skeleton className="h-4 w-[150px]" />
-                </div>
-                <Skeleton className="h-5 w-[100px]" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-[250px]" />
-                  <Skeleton className="h-4 w-[200px]" />
-                  <Skeleton className="h-4 w-[150px]" />
-                </div>
-              </CardContent>
-            </Card>
-          </>
+          <div className="animate-pulse rounded-xl border bg-card p-6">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-2">
+                <div className="h-5 w-[200px] rounded bg-muted" />
+                <div className="h-4 w-[150px] rounded bg-muted" />
+              </div>
+              <div className="h-5 w-[100px] rounded bg-muted" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 w-[250px] rounded bg-muted" />
+              <div className="h-4 w-[200px] rounded bg-muted" />
+              <div className="h-4 w-[150px] rounded bg-muted" />
+            </div>
+          </div>
         ) : filteredAndSortedAppointments.map((appointment) => (
-          <Card 
-            key={appointment.id} 
-            className={`relative overflow-hidden transition-shadow hover:shadow-md ${
+          <div
+            key={appointment.id}
+            className={`relative overflow-hidden rounded-xl border bg-card transition-all hover:shadow-lg ${
               appointment.status === "COMPLETED" 
-                ? "border-primary/20 bg-primary/5" 
+                ? "border-primary/20" 
                 : appointment.status === "CANCELLED"
-                ? "border-destructive/20 bg-destructive/5"
-                : ""
+                ? "border-destructive/20"
+                : "border-border"
             }`}
           >
-            <CardHeader className="space-y-2 pb-2">
+            <div className="flex flex-col gap-4 p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <CardTitle className="text-lg">{appointment.title}</CardTitle>
-                  <div className="flex items-center gap-1.5">
+                  <h3 className="text-xl font-semibold tracking-tight">{appointment.title}</h3>
+                  <div className="flex items-center gap-2">
                     <Badge variant={getStatusVariant(appointment.status)} className="h-5">
                       {appointment.status === "COMPLETED" && <CheckCircleIcon className="mr-1 h-3 w-3" />}
                       {appointment.status === "SCHEDULED" && <Clock3Icon className="mr-1 h-3 w-3" />}
@@ -357,7 +353,7 @@ export function AdminAppointmentList() {
                     </Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   {appointment.status === "PENDING" && (
                     <Button
                       variant="default"
@@ -388,7 +384,7 @@ export function AdminAppointmentList() {
                             setAppointmentToComplete(appointment)
                             setIsCompleteDialogOpen(true)
                           }}
-                          disabled={completingAppointments.has(appointment.id)}
+                          disabled={completingAppointments.has(appointment.id) || new Date(appointment.appointmentDate) > new Date()}
                         >
                           {completingAppointments.has(appointment.id) ? (
                             <>
@@ -398,7 +394,7 @@ export function AdminAppointmentList() {
                           ) : (
                             <>
                               <CheckCircleIcon className="mr-1.5 h-3.5 w-3.5" />
-                              Complete
+                              {new Date(appointment.appointmentDate) > new Date() ? "Cannot complete future appointment" : "Complete"}
                             </>
                           )}
                         </Button>
@@ -568,110 +564,102 @@ export function AdminAppointmentList() {
                   )}
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    <span>Date</span>
+
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <CalendarIcon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Date & Time</p>
+                      <p className="text-sm">
+                        {format(new Date(appointment.appointmentDate), "PPP")} at{" "}
+                        {format(new Date(appointment.appointmentDate), "p")}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm font-medium">
-                    {format(new Date(appointment.appointmentDate), "PPP")}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <UserIcon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Customer</p>
+                      <p className="text-sm">{appointment.customerName}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <ClockIcon className="h-3.5 w-3.5" />
-                    <span>Time</span>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Clock3Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Duration</p>
+                      <p className="text-sm">
+                        {Math.round((new Date(appointment.appointmentEndDate).getTime() - new Date(appointment.appointmentDate).getTime()) / (1000 * 60))} minutes
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm font-medium">
-                    {format(new Date(appointment.appointmentDate), "p")}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <UserIcon className="h-3.5 w-3.5" />
-                    <span>Customer</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <CalendarPlusIcon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Created</p>
+                      <p className="text-sm">
+                        {format(new Date(appointment.createdAt), "PPP")}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm font-medium">{appointment.customerName}</p>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Clock3Icon className="h-3.5 w-3.5" />
-                    <span>Duration</span>
-                  </div>
-                  <p className="text-sm font-medium">
-                    {Math.round((new Date(appointment.appointmentEndDate).getTime() - new Date(appointment.appointmentDate).getTime()) / (1000 * 60))} minutes
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <CalendarPlusIcon className="h-3.5 w-3.5" />
-                    <span>Created</span>
-                  </div>
-                  <p className="text-sm font-medium">
-                    {format(new Date(appointment.createdAt), "PPP")}
-                  </p>
                 </div>
               </div>
 
               {appointment.description && (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>Notes</span>
-                  </div>
-                  <div className="rounded-md border bg-muted/50 p-3">
-                    <p className="text-sm text-muted-foreground">
-                      {appointment.description}
-                    </p>
-                  </div>
+                <div className="rounded-lg border bg-muted/50 p-4">
+                  <p className="text-sm text-muted-foreground">{appointment.description}</p>
                 </div>
               )}
 
               {appointment.status === "COMPLETED" && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {appointment.userRemarks && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <UserIcon className="h-3.5 w-3.5" />
-                        <span>Client Remarks</span>
+                    <div className="rounded-lg border bg-muted/50 p-4">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="h-4 w-4 text-primary" />
+                        <p className="text-sm font-medium">Client Remarks</p>
                       </div>
-                      <div className="rounded-md border bg-muted/50 p-3">
-                        <p className="text-sm text-muted-foreground">
-                          {appointment.userRemarks}
-                        </p>
-                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {appointment.userRemarks}
+                      </p>
                     </div>
                   )}
                   {appointment.adminRemarks && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <ShieldIcon className="h-3.5 w-3.5" />
-                        <span>Admin Remarks</span>
+                    <div className="rounded-lg border bg-muted/50 p-4">
+                      <div className="flex items-center gap-2">
+                        <ShieldIcon className="h-4 w-4 text-primary" />
+                        <p className="text-sm font-medium">Admin Remarks</p>
                       </div>
-                      <div className="rounded-md border bg-muted/50 p-3">
-                        <p className="text-sm text-muted-foreground">
-                          {appointment.adminRemarks}
-                        </p>
-                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {appointment.adminRemarks}
+                      </p>
                     </div>
                   )}
                 </div>
               )}
 
               {appointment.status === "COMPLETED" && appointment.rating && (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                    <span>Customer Feedback</span>
-                  </div>
+                <div className="rounded-lg border bg-muted/50 p-4">
                   <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <p className="text-sm font-medium">Customer Feedback</p>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
                     <div className="flex items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((value) => (
                         <Star
                           key={value}
-                          className={`h-3.5 w-3.5 ${
+                          className={`h-4 w-4 ${
                             value <= getRatingValue(appointment.rating!.ratingValue)
                               ? "fill-yellow-400 text-yellow-400"
                               : "text-gray-300"
@@ -682,29 +670,28 @@ export function AdminAppointmentList() {
                     <Badge variant="outline" className="h-5 font-normal">
                       {appointment.rating.ratingValue}
                     </Badge>
-                    {appointment.rating.comment && (
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.rating.comment}
-                      </p>
-                    )}
                   </div>
+                  {appointment.rating.comment && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {appointment.rating.comment}
+                    </p>
+                  )}
                 </div>
               )}
 
               {appointment.status === "CANCELLED" && appointment.cancellationReason && (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>Cancellation Reason</span>
+                <div className="rounded-lg border bg-destructive/5 p-4">
+                  <div className="flex items-center gap-2">
+                    <XCircleIcon className="h-4 w-4 text-destructive" />
+                    <p className="text-sm font-medium">Cancellation Reason</p>
                   </div>
-                  <div className="rounded-md border bg-muted/50 p-3">
-                    <p className="text-sm text-muted-foreground">
-                      {appointment.cancellationReason}
-                    </p>
-                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {appointment.cancellationReason}
+                  </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
     </div>

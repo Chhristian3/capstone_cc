@@ -59,6 +59,17 @@ export async function PUT(
       )
     }
 
+    // Check if appointment date is in the future
+    const appointmentDate = new Date(currentAppointment.appointmentDate)
+    const currentDate = new Date()
+    
+    if (appointmentDate > currentDate) {
+      return NextResponse.json(
+        { error: "Cannot complete an appointment that is scheduled for a future date" },
+        { status: 400 }
+      )
+    }
+
     const updateData: any = {
       status: "COMPLETED",
     }

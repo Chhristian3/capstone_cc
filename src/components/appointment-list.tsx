@@ -228,21 +228,21 @@ export function AppointmentList() {
       </div>
 
       {filteredAndSortedAppointments.map((appointment: Appointment) => (
-        <Card 
+        <div
           key={appointment.id}
-          className={`relative overflow-hidden transition-shadow hover:shadow-md ${
+          className={`relative overflow-hidden rounded-xl border bg-card transition-all hover:shadow-lg ${
             appointment.status === "COMPLETED" 
-              ? "border-primary/20 bg-primary/5" 
+              ? "border-primary/20" 
               : appointment.status === "CANCELLED"
-              ? "border-destructive/20 bg-destructive/5"
-              : ""
+              ? "border-destructive/20"
+              : "border-border"
           }`}
         >
-          <CardHeader className="space-y-2 pb-2">
+          <div className="flex flex-col gap-4 p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <CardTitle className="text-lg">{appointment.title}</CardTitle>
-                <div className="flex items-center gap-1.5">
+                <h3 className="text-xl font-semibold tracking-tight">{appointment.title}</h3>
+                <div className="flex items-center gap-2">
                   <Badge variant={getStatusVariant(appointment.status)} className="h-5">
                     {appointment.status === "COMPLETED" && <CheckCircleIcon className="mr-1 h-3 w-3" />}
                     {appointment.status === "SCHEDULED" && <Clock3Icon className="mr-1 h-3 w-3" />}
@@ -254,7 +254,7 @@ export function AppointmentList() {
                   </Badge>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 {appointment.status === "SCHEDULED" && (
                   <Dialog open={isCompleteDialogOpen && appointmentToComplete?.id === appointment.id} onOpenChange={setIsCompleteDialogOpen}>
                     <DialogTrigger asChild>
@@ -265,7 +265,7 @@ export function AppointmentList() {
                           setAppointmentToComplete(appointment)
                           setIsCompleteDialogOpen(true)
                         }}
-                        disabled={completingAppointments.has(appointment.id)}
+                        disabled={completingAppointments.has(appointment.id) || new Date(appointment.appointmentDate) > new Date()}
                       >
                         {completingAppointments.has(appointment.id) ? (
                           <>
@@ -275,7 +275,7 @@ export function AppointmentList() {
                         ) : (
                           <>
                             <CheckCircleIcon className="mr-1.5 h-3.5 w-3.5" />
-                            Complete
+                            {new Date(appointment.appointmentDate) > new Date() ? "Cannot complete future appointment" : "Complete"}
                           </>
                         )}
                       </Button>
@@ -472,146 +472,130 @@ export function AppointmentList() {
                 )}
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  <span>Date</span>
+
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <CalendarIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Date & Time</p>
+                    <p className="text-sm">
+                      {format(new Date(appointment.appointmentDate), "PPP")} at{" "}
+                      {format(new Date(appointment.appointmentDate), "p")}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm font-medium">
-                  {format(new Date(appointment.appointmentDate), "PPP")}
-                </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <UserIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Customer</p>
+                    <p className="text-sm">{appointment.customerName}</p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <ClockIcon className="h-3.5 w-3.5" />
-                  <span>Time</span>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <Clock3Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Duration</p>
+                    <p className="text-sm">
+                      {Math.round((new Date(appointment.appointmentEndDate).getTime() - new Date(appointment.appointmentDate).getTime()) / (1000 * 60))} minutes
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm font-medium">
-                  {format(new Date(appointment.appointmentDate), "p")}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <UserIcon className="h-3.5 w-3.5" />
-                  <span>Customer</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <CalendarPlusIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Created</p>
+                    <p className="text-sm">
+                      {format(new Date(appointment.createdAt), "PPP")}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm font-medium">{appointment.customerName}</p>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Clock3Icon className="h-3.5 w-3.5" />
-                  <span>Duration</span>
-                </div>
-                <p className="text-sm font-medium">
-                  {Math.round((new Date(appointment.appointmentEndDate).getTime() - new Date(appointment.appointmentDate).getTime()) / (1000 * 60))} minutes
-                </p>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CalendarPlusIcon className="h-3.5 w-3.5" />
-                  <span>Created</span>
-                </div>
-                <p className="text-sm font-medium">
-                  {new Date(appointment.createdAt).toLocaleDateString(undefined, {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </p>
               </div>
             </div>
+
             {appointment.description && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span>Notes</span>
-                </div>
-                <div className="rounded-md border bg-muted/50 p-3">
-                  <p className="text-sm text-muted-foreground">
-                    {appointment.description}
-                  </p>
-                </div>
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <p className="text-sm text-muted-foreground">{appointment.description}</p>
               </div>
             )}
+
             {appointment.rating && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                  <span>Feedback</span>
-                </div>
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((value) => (
-                        <Star
-                          key={value}
-                          className={`h-3.5 w-3.5 ${
-                            value <= getRatingValue(appointment.rating!.ratingValue)
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <Badge variant="outline" className="h-5 font-normal">
-                      {appointment.rating.ratingValue}
-                    </Badge>
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <Star
+                        key={value}
+                        className={`h-4 w-4 ${
+                          value <= getRatingValue(appointment.rating!.ratingValue)
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    ))}
                   </div>
-                  {appointment.rating.comment && (
-                    <p className="text-sm text-muted-foreground">
-                      {appointment.rating.comment}
-                    </p>
-                  )}
+                  <Badge variant="outline" className="h-5 font-normal">
+                    {appointment.rating.ratingValue}
+                  </Badge>
                 </div>
-              </div>
-            )}
-            {appointment.status === "CANCELLED" && appointment.cancellationReason && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span>Cancellation Reason</span>
-                </div>
-                <div className="rounded-md border bg-muted/50 p-3">
-                  <p className="text-sm text-muted-foreground">
-                    {appointment.cancellationReason}
+                {appointment.rating.comment && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {appointment.rating.comment}
                   </p>
-                </div>
+                )}
               </div>
             )}
+
             {appointment.status === "COMPLETED" && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {appointment.adminRemarks && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <ShieldIcon className="h-3.5 w-3.5" />
-                      <span>Admin Remarks</span>
+                  <div className="rounded-lg border bg-muted/50 p-4">
+                    <div className="flex items-center gap-2">
+                      <ShieldIcon className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-medium">Admin Remarks</p>
                     </div>
-                    <div className="rounded-md border bg-muted/50 p-3">
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.adminRemarks}
-                      </p>
-                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {appointment.adminRemarks}
+                    </p>
                   </div>
                 )}
                 {appointment.userRemarks && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <UserIcon className="h-3.5 w-3.5" />
-                      <span>Your Remarks</span>
+                  <div className="rounded-lg border bg-muted/50 p-4">
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-medium">Your Remarks</p>
                     </div>
-                    <div className="rounded-md border bg-muted/50 p-3">
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.userRemarks}
-                      </p>
-                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {appointment.userRemarks}
+                    </p>
                   </div>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+
+            {appointment.status === "CANCELLED" && appointment.cancellationReason && (
+              <div className="rounded-lg border bg-destructive/5 p-4">
+                <div className="flex items-center gap-2">
+                  <XCircleIcon className="h-4 w-4 text-destructive" />
+                  <p className="text-sm font-medium">Cancellation Reason</p>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {appointment.cancellationReason}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       ))}
       <FeedbackDialog
         appointmentId={feedbackAppointmentId || ""}
