@@ -16,6 +16,8 @@ function getPageTitle(pathname: string): string {
       return 'Users'
     case 'service-types':
       return 'Service Types'
+    case 'messages':
+      return 'Messages'
     default:
       return 'Dashboard'
   }
