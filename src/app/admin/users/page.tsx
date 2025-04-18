@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { UserDetailsModal } from "@/components/admin/UserDetailsModal"
 
 interface User {
   id: string
@@ -45,6 +46,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -181,7 +183,11 @@ export default function UsersPage() {
               </TableRow>
             ) : (
               users.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow 
+                  key={user.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => setSelectedUserId(user.id)}
+                >
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -237,6 +243,11 @@ export default function UsersPage() {
           </TableBody>
         </Table>
       </div>
+
+      <UserDetailsModal
+        userId={selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+      />
     </div>
   )
 } 

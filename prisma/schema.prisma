@@ -58,12 +58,22 @@ model ServiceType {
   @@map(name: "service_types")
 }
 
+enum SentimentCategory {
+  VERY_NEGATIVE
+  NEGATIVE
+  NEUTRAL
+  POSITIVE
+  VERY_POSITIVE
+}
+
 model Rating {
   id            String     @id @default(cuid())
   appointmentId String     @unique @map(name: "appointment_id")
-  appointment   Appointment @relation(fields: [appointmentId], references: [id]) // Owns the relationship
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
   ratingValue   RatingValue
   comment       String?
+  sentimentCategory SentimentCategory
+  sentimentScore   Int
   createdAt     DateTime   @default(now()) @map(name: "created_at")
   updatedAt     DateTime   @updatedAt @map(name: "updated_at")
 
