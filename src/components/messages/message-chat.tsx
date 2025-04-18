@@ -31,10 +31,13 @@ export function MessageChat() {
 
     const fetchMessages = async () => {
       try {
-        const response = await fetch(`/api/messages?messageInstanceId=${instanceId}`)
-        if (!response.ok) throw new Error("Failed to fetch messages")
+        const response = await fetch(`/api/messages/instances/${instanceId}`)
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || "Failed to fetch messages")
+        }
         const data = await response.json()
-        setMessages(data)
+        setMessages(data.messages.reverse()) // Reverse to show oldest first
       } catch (error) {
         console.error("Error fetching messages:", error)
       } finally {

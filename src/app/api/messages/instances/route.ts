@@ -52,12 +52,6 @@ export async function GET(req: NextRequest) {
 
   try {
     const messageInstances = await prisma.messageInstance.findMany({
-      include: {
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1, // Get only the latest message
-        },
-      },
       orderBy: { updatedAt: "desc" },
     })
 

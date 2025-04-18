@@ -10,16 +10,13 @@ import { useUser } from "@clerk/nextjs"
 interface MessageInstance {
   id: string
   clientId: string
-  clientName: string
-  lastMessage?: {
-    content: string
-    createdAt: string
-  }
-  unreadCount: number
+  createdAt: string
+  updatedAt: string
 }
 
 export function MessageList() {
   const [instances, setInstances] = useState<MessageInstance[]>([])
+  const [selectedInstance, setSelectedInstance] = useState<MessageInstance | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -29,8 +26,11 @@ export function MessageList() {
   useEffect(() => {
     const fetchInstances = async () => {
       try {
-        const response = await fetch("/api/message-instances")
-        if (!response.ok) throw new Error("Failed to fetch message instances")
+        const response = await fetch("/api/messages/instances")
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || "Failed to fetch message instances")
+        }
         const data = await response.json()
         setInstances(data)
       } catch (error) {
@@ -45,6 +45,29 @@ export function MessageList() {
 
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    const fetchSelectedInstance = async () => {
+      if (!selectedInstanceId) {
+        setSelectedInstance(null)
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/messages/instances/${selectedInstanceId}`)
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || "Failed to fetch selected instance")
+        }
+        const data = await response.json()
+        setSelectedInstance(data)
+      } catch (error) {
+        console.error("Error fetching selected instance:", error)
+      }
+    }
+
+    fetchSelectedInstance()
+  }, [selectedInstanceId])
 
   if (isLoading) {
     return (
@@ -69,31 +92,17 @@ export function MessageList() {
           >
             <div className="flex items-center space-x-3">
               <Avatar>
-                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${instance.clientName}`} />
-                <AvatarFallback>{instance.clientName.slice(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${instance.clientId}`} />
+                <AvatarFallback>{instance.clientId.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium truncate">{instance.clientName}</p>
-                  {instance.lastMessage && (
-                    <p className="text-xs opacity-70">
-                      {format(new Date(instance.lastMessage.createdAt), "HH:mm")}
-                    </p>
-                  )}
-                </div>
-                {instance.lastMessage && (
-                  <p className="text-sm truncate opacity-70">
-                    {instance.lastMessage.content}
+                  <p className="font-medium truncate">Client {instance.clientId}</p>
+                  <p className="text-xs opacity-70">
+                    {format(new Date(instance.updatedAt), "HH:mm")}
                   </p>
-                )}
-              </div>
-              {instance.unreadCount > 0 && (
-                <div className="flex-shrink-0">
-                  <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
-                    {instance.unreadCount}
-                  </span>
                 </div>
-              )}
+              </div>
             </div>
           </button>
         ))}
