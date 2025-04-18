@@ -72,8 +72,8 @@ model Rating {
   appointment   Appointment @relation(fields: [appointmentId], references: [id])
   ratingValue   RatingValue
   comment       String?
-  sentimentCategory SentimentCategory
-  sentimentScore   Int
+  sentimentCategory SentimentCategory?
+  sentimentScore   Int?
   createdAt     DateTime   @default(now()) @map(name: "created_at")
   updatedAt     DateTime   @updatedAt @map(name: "updated_at")
 
