@@ -39,11 +39,26 @@ export async function POST(req: NextRequest) {
   const { userId } = getAuth(req)
 
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: "Unauthorized: User must be logged in to create an appointment" }, { status: 401 })
   }
 
   try {
     const body = await req.json()
+    
+    // Validate required fields
+    if (!body.title) {
+      return NextResponse.json({ error: "Title is required" }, { status: 400 })
+    }
+    if (!body.appointmentDate) {
+      return NextResponse.json({ error: "Start time is required" }, { status: 400 })
+    }
+    if (!body.appointmentEndDate) {
+      return NextResponse.json({ error: "End time is required" }, { status: 400 })
+    }
+    if (!body.serviceTypeId) {
+      return NextResponse.json({ error: "Service type is required" }, { status: 400 })
+    }
+
     const newAppointmentStart = new Date(body.appointmentDate)
     const newAppointmentEnd = new Date(body.appointmentEndDate)
     const currentDate = new Date()
@@ -53,7 +68,7 @@ export async function POST(req: NextRequest) {
     // Validate appointment date is not in the past
     if (newAppointmentStart < currentDate) {
       return NextResponse.json(
-        { error: "Cannot create appointments in the past" },
+        { error: "Cannot book appointments in the past" },
         { status: 400 }
       )
     }
@@ -61,7 +76,23 @@ export async function POST(req: NextRequest) {
     // Validate appointment date is not more than 30 days in the future
     if (newAppointmentStart > maxDate) {
       return NextResponse.json(
-        { error: "Cannot create appointments more than 30 days in advance" },
+        { error: "Appointments can only be booked up to 30 days in advance" },
+        { status: 400 }
+      )
+    }
+
+    // Validate end date is after start date
+    if (newAppointmentEnd <= newAppointmentStart) {
+      return NextResponse.json(
+        { error: "End time must be after start time" },
+        { status: 400 }
+      )
+    }
+
+    // Validate appointment is on the same day
+    if (newAppointmentStart.toDateString() !== newAppointmentEnd.toDateString()) {
+      return NextResponse.json(
+        { error: "Appointments must be on the same day" },
         { status: 400 }
       )
     }
@@ -96,17 +127,39 @@ export async function POST(req: NextRequest) {
           },
           {
             NOT: {
-              id: body.id, // Exclude the current appointment if it's an update
+              id: body.id,
+            },
+          },
+          {
+            NOT: {
+              status: "CANCELLED",
             },
           },
         ],
       },
+      include: {
+        serviceType: true,
+      },
     })
 
     if (conflictingAppointment) {
+      const conflictStart = new Date(conflictingAppointment.appointmentDate).toLocaleString()
+      const conflictEnd = new Date(conflictingAppointment.appointmentEndDate).toLocaleString()
       return NextResponse.json(
-        { error: "This time slot conflicts with an existing appointment" },
+        { error: `Time slot already booked: ${conflictStart} - ${conflictEnd}` },
         { status: 409 }
+      )
+    }
+
+    // Validate service type exists
+    const serviceType = await prisma.serviceType.findUnique({
+      where: { id: body.serviceTypeId },
+    })
+
+    if (!serviceType) {
+      return NextResponse.json(
+        { error: "Invalid service type" },
+        { status: 400 }
       )
     }
 
@@ -144,7 +197,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error creating appointment:", error)
     return NextResponse.json(
-      { error: "Error creating appointment" },
+      { error: "An unexpected error occurred while creating the appointment. Please try again later." },
       { status: 500 }
     )
   }

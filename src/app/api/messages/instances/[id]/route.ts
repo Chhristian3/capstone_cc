@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAuth } from "@clerk/nextjs/server"
+import { getAuth, clerkClient } from "@clerk/nextjs/server"
 import { PrismaClient } from "@prisma/client"
+import { User } from "@clerk/nextjs/server"
 
 const prisma = new PrismaClient()
 
@@ -31,7 +32,29 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(messageInstance)
+    // Fetch sender information for all unique sender IDs
+    const senderIds = new Set<string>()
+    messageInstance.messages.forEach(message => {
+      senderIds.add(message.senderId)
+    })
+
+    const client = await clerkClient()
+    const response = await client.users.getUserList({
+      userId: Array.from(senderIds),
+    })
+
+    const senderMap = new Map(response.data.map((user: User) => [user.id, user]))
+
+    // Attach sender information to messages
+    const messagesWithSenders = messageInstance.messages.map(message => ({
+      ...message,
+      sender: senderMap.get(message.senderId) || null,
+    }))
+
+    return NextResponse.json({
+      ...messageInstance,
+      messages: messagesWithSenders,
+    })
   } catch (error) {
     console.error("Error fetching message instance:", error)
     return NextResponse.json(

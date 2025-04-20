@@ -178,15 +178,15 @@ export function AddAppointmentForm({
         maxDate.setHours(23, 59, 59, 999)
 
         if (selectedDate < today) {
-          throw new Error("Cannot create appointments in the past")
+          throw new Error("Cannot create appointments in the past. Please select a future date and time.")
         }
         if (selectedDate > maxDate) {
-          throw new Error("Cannot create appointments more than 30 days in advance")
+          throw new Error("Appointments can only be scheduled up to 30 days in advance")
         }
       }
 
       // @ts-ignore
-      await addAppointment({
+      const appointment = await addAppointment({
         ...values,
         customerName: user?.fullName || "Unknown",
         expirationDate: new Date(
@@ -219,12 +219,61 @@ export function AddAppointmentForm({
       })
       onSuccess()
     } catch (error: any) {
-      console.error(error)
-      toast({
-        title: "Error Creating Appointment",
-        description: error.message || "Failed to create appointment. Please try again.",
-        variant: "destructive",
+      console.error("Appointment creation error:", error)
+      
+      // Parse the error response
+      let errorMessage = "Failed to create appointment. Please try again."
+      
+      try {
+        // If the error is a string, try to parse it as JSON
+        if (typeof error === 'string') {
+          const parsedError = JSON.parse(error)
+          errorMessage = parsedError.error || errorMessage
+        } 
+        // If the error is an object with an error property
+        else if (error.error) {
+          errorMessage = error.error
+        }
+        // If the error is a Response object
+        else if (error instanceof Response) {
+          const errorData = await error.json()
+          errorMessage = errorData.error || errorMessage
+        }
+      } catch (parseError) {
+        console.error("Error parsing error response:", parseError)
+      }
+      
+      console.log("Error details:", {
+        message: errorMessage,
+        originalError: error
       })
+      
+      // Check if the error is a time slot conflict
+      if (errorMessage.includes("Time slot conflict")) {
+        toast({
+          title: "Time Slot Conflict",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      } else if (errorMessage.includes("Unauthorized")) {
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to create an appointment",
+          variant: "destructive",
+        })
+      } else if (errorMessage.includes("service type")) {
+        toast({
+          title: "Service Type Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error Creating Appointment",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     }
   }
 

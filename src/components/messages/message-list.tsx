@@ -12,6 +12,18 @@ interface MessageInstance {
   clientId: string
   createdAt: string
   updatedAt: string
+  messages: {
+    id: string
+    content: string
+    senderId: string
+    createdAt: string
+  }[]
+  client: {
+    id: string
+    firstName: string | null
+    lastName: string | null
+    imageUrl: string | null
+  } | null
 }
 
 export function MessageList() {
@@ -80,32 +92,48 @@ export function MessageList() {
   return (
     <ScrollArea className="h-full">
       <div className="space-y-2 p-2">
-        {instances.map((instance) => (
-          <button
-            key={instance.id}
-            onClick={() => router.push(`/admin/messages?instanceId=${instance.id}`)}
-            className={`w-full p-3 rounded-lg transition-colors ${
-              selectedInstanceId === instance.id
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted"
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <Avatar>
-                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${instance.clientId}`} />
-                <AvatarFallback>{instance.clientId.slice(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium truncate">Client {instance.clientId}</p>
-                  <p className="text-xs opacity-70">
-                    {format(new Date(instance.updatedAt), "HH:mm")}
-                  </p>
+        {instances.map((instance) => {
+          const lastMessage = instance.messages[0]
+          const client = instance.client
+
+          return (
+            <button
+              key={instance.id}
+              onClick={() => router.push(`/admin/messages?instanceId=${instance.id}`)}
+              className={`w-full p-3 rounded-lg transition-colors ${
+                selectedInstanceId === instance.id
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted"
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <Avatar>
+                  <AvatarImage src={client?.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${instance.clientId}`} />
+                  <AvatarFallback>
+                    {client?.firstName?.[0]}{client?.lastName?.[0] || instance.clientId.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium truncate">
+                      {client?.firstName && client?.lastName
+                        ? `${client.firstName} ${client.lastName}`
+                        : `Client ${instance.clientId}`}
+                    </p>
+                    <p className="text-xs opacity-70">
+                      {format(new Date(instance.updatedAt), "HH:mm")}
+                    </p>
+                  </div>
+                  {lastMessage && (
+                    <p className="text-sm text-muted-foreground truncate">
+                      {lastMessage.content}
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          )
+        })}
       </div>
     </ScrollArea>
   )

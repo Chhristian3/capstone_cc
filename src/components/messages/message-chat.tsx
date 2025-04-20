@@ -15,6 +15,12 @@ interface Message {
   senderId: string
   createdAt: string
   isRead: boolean
+  sender: {
+    id: string
+    firstName: string | null
+    lastName: string | null
+    imageUrl: string | null
+  } | null
 }
 
 export function MessageChat() {
@@ -108,8 +114,10 @@ export function MessageChat() {
             >
               {message.senderId !== user?.id && (
                 <Avatar>
-                  <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${message.senderId}`} />
-                  <AvatarFallback>{message.senderId.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={message.sender?.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${message.senderId}`} />
+                  <AvatarFallback>
+                    {message.sender?.firstName?.[0]}{message.sender?.lastName?.[0] || message.senderId.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
               )}
               <div
@@ -119,6 +127,13 @@ export function MessageChat() {
                     : "bg-muted"
                 }`}
               >
+                {message.senderId !== user?.id && (
+                  <p className="text-xs font-medium mb-1">
+                    {message.sender?.firstName && message.sender?.lastName
+                      ? `${message.sender.firstName} ${message.sender.lastName}`
+                      : `User ${message.senderId}`}
+                  </p>
+                )}
                 <p className="text-sm">{message.content}</p>
                 <p className="text-xs mt-1 opacity-70">
                   {format(new Date(message.createdAt), "HH:mm")}

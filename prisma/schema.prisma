@@ -130,4 +130,5 @@ model Message {
   messageInstance MessageInstance @relation(fields: [messageInstanceId], references: [id])
 
   @@map(name: "messages")
+  @@index([senderId])
 }
