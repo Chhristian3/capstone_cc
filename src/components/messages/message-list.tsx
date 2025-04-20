@@ -45,6 +45,11 @@ export function MessageList() {
         }
         const data = await response.json()
         setInstances(data)
+        
+        // Set the first instance's client ID if no client ID is currently selected
+        if (!selectedClientId && data.length > 0) {
+          router.push(`/admin/messages?clientId=${data[0].clientId}`)
+        }
       } catch (error) {
         console.error("Error fetching message instances:", error)
       } finally {
@@ -53,10 +58,10 @@ export function MessageList() {
     }
 
     fetchInstances()
-    const interval = setInterval(fetchInstances, 5000) // Poll every 5 seconds
+    const interval = setInterval(fetchInstances, 2000) // Poll every 5 seconds
 
     return () => clearInterval(interval)
-  }, [])
+  }, [router, selectedClientId])
 
   useEffect(() => {
     const fetchSelectedInstance = async () => {

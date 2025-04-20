@@ -43,9 +43,9 @@ export function MessageChat() {
   const [instance, setInstance] = useState<MessageInstance | null>(null)
   const [newMessage, setNewMessage] = useState("")
   const [isLoading, setIsLoading] = useState(true)
-  const searchParams = useSearchParams()
-  const clientId = searchParams.get("clientId")
   const { user } = useUser()
+  const searchParams = useSearchParams()
+  const clientId = searchParams.get("clientId") || user?.id
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,7 +61,12 @@ export function MessageChat() {
         const instances = await instanceResponse.json()
         const instance = instances[0]
         
-        if (!instance) return
+        if (!instance) {
+          setInstance(null)
+          setMessages([])
+          setIsLoading(false)
+          return
+        }
 
         const response = await fetch(`/api/messages/instances/${instance.id}`)
         if (!response.ok) {
@@ -79,10 +84,10 @@ export function MessageChat() {
     }
 
     fetchMessages()
-    const interval = setInterval(fetchMessages, 2000) // Poll every 2 seconds
+    const interval = setInterval(fetchMessages, 3000) 
 
     return () => clearInterval(interval)
-  }, [clientId])
+  }, [clientId, user?.id])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -122,12 +127,45 @@ export function MessageChat() {
     }
   }
 
-  if (!clientId) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Select a conversation to start messaging</p>
-      </div>
-    )
+  const handleStartConversation = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMessage.trim() || !clientId) return
+
+    try {
+      // Create a new message instance
+      const instanceResponse = await fetch("/api/messages/instances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId,
+        }),
+      })
+
+      if (!instanceResponse.ok) {
+        throw new Error("Failed to create message instance")
+      }
+
+      const newInstance = await instanceResponse.json()
+
+      // Send the first message
+      const messageResponse = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageInstanceId: newInstance.id,
+          content: newMessage,
+        }),
+      })
+
+      if (!messageResponse.ok) throw new Error("Failed to send message")
+      
+      setNewMessage("")
+      const newMessageData = await messageResponse.json()
+      setInstance(newInstance)
+      setMessages([newMessageData])
+    } catch (error) {
+      console.error("Error starting conversation:", error)
+    }
   }
 
   if (isLoading) {
@@ -138,79 +176,90 @@ export function MessageChat() {
     )
   }
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-background">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center space-x-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={instance?.client?.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${instance?.clientId}`} />
-            <AvatarFallback>
-              {instance?.client?.firstName?.[0]}{instance?.client?.lastName?.[0] || instance?.clientId.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-medium">
-              {instance?.client?.firstName && instance?.client?.lastName
-                ? `${instance.client.firstName} ${instance.client.lastName}`
-                : `Client ${instance?.clientId}`}
-            </p>
-            <p className="text-xs text-muted-foreground">Active now</p>
-          </div>
-        </div>
-      </div>
+  if (!instance) {
+    const isClient = clientId === user?.id
 
+    if (isClient) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-4 p-4">
+          <p className="text-muted-foreground">Select a conversation to start messaging.</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">No messages yet. Wait for the client to start the conversation.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-background">
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "flex items-start space-x-4",
-                message.senderId === user?.id ? "justify-end" : "justify-start"
-              )}
-            >
-              {message.senderId !== user?.id && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={message.sender?.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${message.senderId}`} />
-                  <AvatarFallback>
-                    {message.sender?.firstName?.[0]}{message.sender?.lastName?.[0] || message.senderId.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              )}
+          {messages.map((message) => {
+            const isCurrentUser = message.senderId === user?.id
+            return (
               <div
+                key={message.id}
                 className={cn(
-                  "max-w-[70%] rounded-lg p-3",
-                  message.senderId === user?.id
-                    ? "bg-primary text-primary-foreground rounded-tr-none"
-                    : "bg-muted rounded-tl-none"
+                  "flex items-start gap-2",
+                  isCurrentUser ? "justify-end" : "justify-start"
                 )}
               >
-                {message.senderId !== user?.id && (
-                  <p className="text-xs font-medium mb-1">
-                    {message.sender?.firstName && message.sender?.lastName
-                      ? `${message.sender.firstName} ${message.sender.lastName}`
-                      : `User ${message.senderId}`}
-                  </p>
+                {!isCurrentUser && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={message.sender?.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${message.senderId}`} />
+                    <AvatarFallback>
+                      {message.sender?.firstName?.[0]}{message.sender?.lastName?.[0] || message.senderId.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 )}
-                <p className="text-sm">{message.content}</p>
-                <p className="text-xs mt-1 opacity-70">
-                  {format(new Date(message.createdAt), "HH:mm")}
-                </p>
+                <div
+                  className={cn(
+                    "max-w-[70%] rounded-lg p-3",
+                    isCurrentUser
+                      ? "bg-primary text-primary-foreground rounded-tr-none"
+                      : "bg-muted rounded-tl-none"
+                  )}
+                >
+                  {!isCurrentUser && (
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-xs font-medium">
+                        {message.sender?.firstName && message.sender?.lastName
+                          ? `${message.sender.firstName} ${message.sender.lastName}`
+                          : "User"}
+                      </p>
+                      {message.senderId !== instance?.clientId && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                          Admin
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-sm break-words">{message.content}</p>
+                  <p className="text-xs mt-1 opacity-70">
+                    {format(new Date(message.createdAt), "HH:mm")}
+                  </p>
+                </div>
+                {isCurrentUser && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.id}`} />
+                    <AvatarFallback>
+                      {user?.firstName?.[0]}{user?.lastName?.[0] || user?.id.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
               </div>
-              {message.senderId === user?.id && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.imageUrl} />
-                  <AvatarFallback>{user?.firstName?.[0]}{user?.lastName?.[0]}</AvatarFallback>
-                </Avatar>
-              )}
-            </div>
-          ))}
+            )
+          })}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
       <div className="p-4 border-t">
-        <form onSubmit={handleSendMessage} className="flex w-full space-x-2">
+        <form onSubmit={handleSendMessage} className="flex w-full gap-2">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}

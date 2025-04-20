@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Search, MoreHorizontal } from "lucide-react"
+import { Search, MoreHorizontal, MessageSquare } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -120,6 +120,42 @@ export default function UsersPage() {
     }
   }
 
+  const handleMessageUser = async (userId: string) => {
+    try {
+      // First check if there's an existing instance
+      const instanceResponse = await fetch(`/api/messages/instances?clientId=${userId}`)
+      if (!instanceResponse.ok) throw new Error("Failed to check message instance")
+      
+      const instances = await instanceResponse.json()
+      let instanceId = instances[0]?.id
+
+      // If no instance exists, create one
+      if (!instanceId) {
+        const createInstanceResponse = await fetch("/api/messages/instances", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientId: userId,
+          }),
+        })
+
+        if (!createInstanceResponse.ok) throw new Error("Failed to create message instance")
+        
+        const newInstance = await createInstanceResponse.json()
+        instanceId = newInstance.id
+      }
+
+      // Redirect to messages page with the instance
+      router.push(`/admin/messages?clientId=${userId}`)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start conversation",
+        variant: "destructive",
+      })
+    }
+  }
+
   const getInitials = (firstName: string | null, lastName: string | null) => {
     const first = firstName?.[0] || ""
     const last = lastName?.[0] || ""
@@ -216,28 +252,48 @@ export default function UsersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleRoleChange(user.id, "makeAdmin")}
-                            disabled={user.publicMetadata.role === "admin"}
-                          >
-                            Make Admin
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleRoleChange(user.id, "removeRole")}
-                            disabled={!user.publicMetadata.role}
-                          >
-                            Remove Role
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleMessageUser(user.id)
+                          }}
+                          className="h-8 w-8"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          <span className="sr-only">Message user</span>
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRoleChange(user.id, "makeAdmin")
+                              }}
+                              disabled={user.publicMetadata.role === "admin"}
+                            >
+                              Make Admin
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRoleChange(user.id, "removeRole")
+                              }}
+                              disabled={!user.publicMetadata.role}
+                            >
+                              Remove Role
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
