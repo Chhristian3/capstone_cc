@@ -32,18 +32,22 @@ export async function GET(
       )
     }
 
+    // Fetch client information
+    const client = await clerkClient()
+    const clientResponse = await client.users.getUser(messageInstance.clientId)
+    const clientData = clientResponse || null
+
     // Fetch sender information for all unique sender IDs
     const senderIds = new Set<string>()
     messageInstance.messages.forEach(message => {
       senderIds.add(message.senderId)
     })
 
-    const client = await clerkClient()
-    const response = await client.users.getUserList({
+    const senderResponse = await client.users.getUserList({
       userId: Array.from(senderIds),
     })
 
-    const senderMap = new Map(response.data.map((user: User) => [user.id, user]))
+    const senderMap = new Map(senderResponse.data.map((user: User) => [user.id, user]))
 
     // Attach sender information to messages
     const messagesWithSenders = messageInstance.messages.map(message => ({
@@ -53,6 +57,7 @@ export async function GET(
 
     return NextResponse.json({
       ...messageInstance,
+      client: clientData,
       messages: messagesWithSenders,
     })
   } catch (error) {

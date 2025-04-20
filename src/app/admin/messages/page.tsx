@@ -11,7 +11,7 @@ export default async function MessagesPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100vh-64px)]">
       <div className="w-1/3 border-r">
         <Card className="h-full rounded-none border-0">
           <CardHeader>

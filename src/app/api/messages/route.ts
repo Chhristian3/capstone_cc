@@ -60,17 +60,29 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url)
-    const messageInstanceId = searchParams.get("messageInstanceId")
+    const clientId = searchParams.get("clientId")
 
-    if (!messageInstanceId) {
+    if (!clientId) {
       return NextResponse.json(
-        { error: "Message instance ID is required" },
+        { error: "Client ID is required" },
         { status: 400 }
       )
     }
 
+    // First get the instance for this client
+    const instance = await prisma.messageInstance.findUnique({
+      where: { clientId },
+    })
+
+    if (!instance) {
+      return NextResponse.json(
+        { error: "Message instance not found for this client" },
+        { status: 404 }
+      )
+    }
+
     const messages = await prisma.message.findMany({
-      where: { messageInstanceId },
+      where: { messageInstanceId: instance.id },
       orderBy: { createdAt: "asc" },
     })
 

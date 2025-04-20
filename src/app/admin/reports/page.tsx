@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { ReportsCharts } from "@/components/admin/ReportsCharts"
+import { Shell } from "@/components/ui/shell"
 
 interface ChartData {
   name: string
@@ -152,5 +153,9 @@ async function getAppointmentStats(): Promise<Stats> {
 export default async function ReportsPage() {
   const stats = await getAppointmentStats()
 
-  return <ReportsCharts {...stats} />
+  return (
+    <Shell>
+      <ReportsCharts {...stats} />
+    </Shell>
+  )
 } 

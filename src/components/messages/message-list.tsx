@@ -32,7 +32,7 @@ export function MessageList() {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const selectedInstanceId = searchParams.get("instanceId")
+  const selectedClientId = searchParams.get("clientId")
   const { user } = useUser()
 
   useEffect(() => {
@@ -60,26 +60,26 @@ export function MessageList() {
 
   useEffect(() => {
     const fetchSelectedInstance = async () => {
-      if (!selectedInstanceId) {
+      if (!selectedClientId) {
         setSelectedInstance(null)
         return
       }
 
       try {
-        const response = await fetch(`/api/messages/instances/${selectedInstanceId}`)
+        const response = await fetch(`/api/messages/instances?clientId=${selectedClientId}`)
         if (!response.ok) {
           const error = await response.json()
           throw new Error(error.error || "Failed to fetch selected instance")
         }
         const data = await response.json()
-        setSelectedInstance(data)
+        setSelectedInstance(data[0] || null)
       } catch (error) {
         console.error("Error fetching selected instance:", error)
       }
     }
 
     fetchSelectedInstance()
-  }, [selectedInstanceId])
+  }, [selectedClientId])
 
   if (isLoading) {
     return (
@@ -99,9 +99,9 @@ export function MessageList() {
           return (
             <button
               key={instance.id}
-              onClick={() => router.push(`/admin/messages?instanceId=${instance.id}`)}
+              onClick={() => router.push(`/admin/messages?clientId=${instance.clientId}`)}
               className={`w-full p-3 rounded-lg transition-colors ${
-                selectedInstanceId === instance.id
+                selectedClientId === instance.clientId
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-muted"
               }`}

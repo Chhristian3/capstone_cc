@@ -52,7 +52,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(req.url)
+    const clientId = searchParams.get("clientId")
+
     const messageInstances = await prisma.messageInstance.findMany({
+      where: clientId ? { clientId } : undefined,
       orderBy: { updatedAt: "desc" },
       include: {
         messages: {
