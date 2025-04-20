@@ -96,6 +96,7 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
+        type="button"
           variant="outline"
           className={cn(
             "w-full justify-start text-left font-normal",
@@ -127,6 +128,7 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
                   const isDisabled = isHourDisabled(hour, isPM);
                   return (
                     <Button
+                    type="button"
                       key={hour}
                       size="icon"
                       variant={
@@ -152,6 +154,7 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
               <div className="flex sm:flex-col p-2">
                 {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
                   <Button
+                  type="button"
                     key={minute}
                     size="icon"
                     variant={
@@ -180,6 +183,7 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
                   );
                   return (
                     <Button
+                      type="button"
                       key={ampm}
                       size="icon"
                       variant={

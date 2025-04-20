@@ -18,6 +18,7 @@ import {
   CalendarPlusIcon,
   MessageSquarePlus,
   ShieldIcon,
+  Loader2,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -89,6 +90,7 @@ export function AdminAppointmentList() {
   const [appointmentToAddRemarks, setAppointmentToAddRemarks] = useState<Appointment | null>(null)
   const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false)
   const [adminRemarks, setAdminRemarks] = useState("")
+  const [isAddingRemarks, setIsAddingRemarks] = useState(false)
 
   const markAppointmentCompleted = async (appointment: Appointment) => {
     try {
@@ -182,6 +184,7 @@ export function AdminAppointmentList() {
 
   const handleAddAdminRemarks = async (appointment: Appointment) => {
     try {
+      setIsAddingRemarks(true)
       const response = await fetch(`/api/appointments?id=${appointment.id}`, {
         method: "PUT",
         headers: {
@@ -201,6 +204,8 @@ export function AdminAppointmentList() {
       setAdminRemarks("")
     } catch (error) {
       console.error("Error adding admin remarks:", error)
+    } finally {
+      setIsAddingRemarks(false)
     }
   }
 
@@ -532,8 +537,16 @@ export function AdminAppointmentList() {
                           <Button 
                             variant="default" 
                             onClick={() => appointmentToAddRemarks && handleAddAdminRemarks(appointmentToAddRemarks)}
+                            disabled={isAddingRemarks}
                           >
-                            Save Remarks
+                            {isAddingRemarks ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              "Save Remarks"
+                            )}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -595,9 +608,16 @@ export function AdminAppointmentList() {
                           <Button 
                             variant="destructive" 
                             onClick={handleCancelAppointment}
-                            disabled={!cancellationReason.trim()}
+                            disabled={!cancellationReason.trim() || cancellingAppointments.has(appointmentToCancel?.id || "")}
                           >
-                            Yes, Cancel Appointment
+                            {cancellingAppointments.has(appointmentToCancel?.id || "") ? (
+                              <>
+                                <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                Cancelling...
+                              </>
+                            ) : (
+                              "Yes, Cancel Appointment"
+                            )}
                           </Button>
                         </DialogFooter>
                       </DialogContent>

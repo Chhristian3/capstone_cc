@@ -17,6 +17,7 @@ import {
   CalendarPlusIcon,
   MessageSquarePlus,
   ShieldIcon,
+  Loader2,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -63,6 +64,7 @@ export function AppointmentList() {
   const [appointmentToAddRemarks, setAppointmentToAddRemarks] = useState<Appointment | null>(null)
   const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false)
   const [userRemarks, setUserRemarks] = useState("")
+  const [isAddingRemarks, setIsAddingRemarks] = useState(false)
 
   const filteredAndSortedAppointments = [...appointments]
     .filter((appointment) => statusFilter === "all" || appointment.status === statusFilter)
@@ -150,6 +152,7 @@ export function AppointmentList() {
 
   const handleAddUserRemarks = async (appointment: Appointment) => {
     try {
+      setIsAddingRemarks(true)
       const response = await fetch(`/api/appointments?id=${appointment.id}`, {
         method: "PUT",
         headers: {
@@ -172,6 +175,8 @@ export function AppointmentList() {
     } catch (error) {
       console.error("Error adding user remarks:", error)
       toast.error("Failed to add remarks")
+    } finally {
+      setIsAddingRemarks(false)
     }
   }
 
@@ -372,8 +377,16 @@ export function AppointmentList() {
                         <Button 
                           variant="default" 
                           onClick={() => appointmentToAddRemarks && handleAddUserRemarks(appointmentToAddRemarks)}
+                          disabled={isAddingRemarks}
                         >
-                          Save Remarks
+                          {isAddingRemarks ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save Remarks"
+                          )}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -443,9 +456,16 @@ export function AppointmentList() {
                         <Button 
                           variant="destructive" 
                           onClick={handleCancelAppointment}
-                          disabled={!cancellationReason.trim()}
+                          disabled={!cancellationReason.trim() || cancellingAppointments.has(appointmentToCancel?.id || "")}
                         >
-                          Yes, Cancel Appointment
+                          {cancellingAppointments.has(appointmentToCancel?.id || "") ? (
+                            <>
+                              <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              Cancelling...
+                            </>
+                          ) : (
+                            "Yes, Cancel Appointment"
+                          )}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
