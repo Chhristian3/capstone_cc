@@ -43,6 +43,7 @@ export function MessageChat() {
   const [instance, setInstance] = useState<MessageInstance | null>(null)
   const [newMessage, setNewMessage] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { user } = useUser()
   const searchParams = useSearchParams()
   const clientId = searchParams.get("clientId") || user?.id
@@ -95,8 +96,9 @@ export function MessageChat() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMessage.trim() || !clientId) return
+    if (!newMessage.trim() || !clientId || isSubmitting) return
 
+    setIsSubmitting(true)
     try {
       // First get the instance for this client
       const instanceResponse = await fetch(`/api/messages/instances?clientId=${clientId}`)
@@ -124,13 +126,16 @@ export function MessageChat() {
       setMessages((prev) => [...prev, newMessageData])
     } catch (error) {
       console.error("Error sending message:", error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleStartConversation = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMessage.trim() || !clientId) return
+    if (!newMessage.trim() || !clientId || isSubmitting) return
 
+    setIsSubmitting(true)
     try {
       // Create a new message instance
       const instanceResponse = await fetch("/api/messages/instances", {
@@ -165,6 +170,8 @@ export function MessageChat() {
       setMessages([newMessageData])
     } catch (error) {
       console.error("Error starting conversation:", error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -265,9 +272,15 @@ export function MessageChat() {
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             className="flex-1"
+            disabled={isSubmitting}
           />
-          <Button type="submit" size="icon" className="shrink-0">
-            <Send className="h-4 w-4" />
+          <Button 
+            type="submit" 
+            size="icon" 
+            className="shrink-0"
+            disabled={isSubmitting}
+          >
+            <Send className={cn("h-4 w-4", isSubmitting && "animate-pulse")} />
           </Button>
         </form>
       </div>
