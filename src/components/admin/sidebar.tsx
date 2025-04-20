@@ -12,6 +12,22 @@ import {
   MessageSquare,
 } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarSeparator,
+} from "@/components/ui/sidebar"
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  UserButton,
+  useUser,
+} from "@clerk/nextjs"
 
 const navigation = [
   {
@@ -46,35 +62,44 @@ const navigation = [
   },
 ]
 
-export default function Sidebar() {
+export default function AdminSidebar() {
   const pathname = usePathname()
+  const { user } = useUser()
 
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-background">
-      <div className="flex h-14 items-center justify-between border-b px-4">
-        <h1 className="text-lg font-semibold">Admin Panel</h1>
+    <Sidebar>
+      <SidebarHeader className="flex flex-row justify-between gap-5 border-b border-sidebar-border py-3">
+        <div className="flex items-center gap-3">
+          <SignedOut>
+            <SignInButton />
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+          <span className="text-lg">{user?.fullName}</span>
+        </div>
         <ModeToggle />
-      </div>
-      <nav className="flex-1 space-y-1 p-2">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.name}
-            </Link>
-          )
-        })}
-      </nav>
-    </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarMenu>
+          {navigation.map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <SidebarMenuItem key={item.name}>
+                <Link href={item.href} className="w-full">
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    tooltip={item.name}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.name}</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarMenu>
+      </SidebarContent>
+    </Sidebar>
   )
 } 

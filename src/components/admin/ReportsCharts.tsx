@@ -52,7 +52,7 @@ export function ReportsCharts({
   sentimentTrend
 }: ReportsChartsProps) {
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Reports & Analytics</h1>
       </div>
@@ -74,7 +74,7 @@ export function ReportsCharts({
             <CardTitle>Appointment Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div>
               <ChartContainer
                 config={{
                   value: { color: "hsl(var(--primary))" }
@@ -109,7 +109,7 @@ export function ReportsCharts({
             <CardTitle>Service Type Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div>
               <ChartContainer
                 config={{
                   value: { color: "hsl(var(--primary))" }
@@ -134,7 +134,7 @@ export function ReportsCharts({
             <CardTitle>Customer Ratings</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div>
               <ChartContainer
                 config={{
                   value: { color: "hsl(var(--primary))" }
