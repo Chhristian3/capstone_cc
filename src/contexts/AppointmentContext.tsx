@@ -102,9 +102,12 @@ export function AppointmentProvider({
         },
         body: JSON.stringify(appointment),
       })
+      
       if (!response.ok) {
-        throw new Error("Failed to add appointment")
+        const errorData = await response.json()
+        throw errorData
       }
+      
       await refreshAppointments()
     } catch (error) {
       console.error("Error adding appointment:", error)

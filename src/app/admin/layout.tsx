@@ -21,7 +21,7 @@ export default async function AdminLayout({
         <header className="sticky top-0 flex h-16 shrink-0 items-center justify-end gap-2 border-b bg-background px-4 z-50">
           <NotificationButton />
         </header>
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

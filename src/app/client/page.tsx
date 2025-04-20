@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { AppointmentProvider } from "@/contexts/AppointmentContext"
+import { ChatBubble } from "@/components/messages/chat-bubble"
 
 import {
   Breadcrumb,
@@ -43,6 +44,7 @@ export default function Page() {
             <AppointmentList />
           </Suspense>
         </div>
+        <ChatBubble />
       </SidebarInset>
     </SidebarProvider>
   )

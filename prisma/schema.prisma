@@ -106,3 +106,29 @@ model Notification {
 
   @@map(name: "notifications")
 }
+
+model MessageInstance {
+  id          String    @id @default(cuid())
+  clientId    String    @unique @map(name: "client_id")
+  createdAt   DateTime  @default(now()) @map(name: "created_at")
+  updatedAt   DateTime  @updatedAt @map(name: "updated_at")
+  
+  messages    Message[]
+
+  @@map(name: "message_instances")
+}
+
+model Message {
+  id              String    @id @default(cuid())
+  messageInstanceId String  @map(name: "message_instance_id")
+  senderId        String    @map(name: "sender_id")
+  content         String
+  isRead          Boolean   @default(false) @map(name: "is_read")
+  createdAt       DateTime  @default(now()) @map(name: "created_at")
+  updatedAt       DateTime  @updatedAt @map(name: "updated_at")
+  
+  messageInstance MessageInstance @relation(fields: [messageInstanceId], references: [id])
+
+  @@map(name: "messages")
+  @@index([senderId])
+}

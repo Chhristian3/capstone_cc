@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Search, MoreHorizontal } from "lucide-react"
+import { Search, MoreHorizontal, MessageSquare } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { UserDetailsModal } from "@/components/admin/UserDetailsModal"
+import { Shell } from "@/components/ui/shell"
 
 interface User {
   id: string
@@ -119,6 +120,42 @@ export default function UsersPage() {
     }
   }
 
+  const handleMessageUser = async (userId: string) => {
+    try {
+      // First check if there's an existing instance
+      const instanceResponse = await fetch(`/api/messages/instances?clientId=${userId}`)
+      if (!instanceResponse.ok) throw new Error("Failed to check message instance")
+      
+      const instances = await instanceResponse.json()
+      let instanceId = instances[0]?.id
+
+      // If no instance exists, create one
+      if (!instanceId) {
+        const createInstanceResponse = await fetch("/api/messages/instances", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientId: userId,
+          }),
+        })
+
+        if (!createInstanceResponse.ok) throw new Error("Failed to create message instance")
+        
+        const newInstance = await createInstanceResponse.json()
+        instanceId = newInstance.id
+      }
+
+      // Redirect to messages page with the instance
+      router.push(`/admin/messages?clientId=${userId}`)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start conversation",
+        variant: "destructive",
+      })
+    }
+  }
+
   const getInitials = (firstName: string | null, lastName: string | null) => {
     const first = firstName?.[0] || ""
     const last = lastName?.[0] || ""
@@ -131,123 +168,145 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Users</h2>
-        <p className="text-muted-foreground">
-          Manage user accounts and their roles.
-        </p>
-      </div>
-
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+    <Shell>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Users</h2>
+          <p className="text-muted-foreground">
+            Manage user accounts and their roles.
+          </p>
         </div>
-        <Button type="submit">Search</Button>
-      </form>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button type="submit">Search</Button>
+        </form>
+
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={4} className="text-center">
-                  Loading...
-                </TableCell>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
-            ) : error ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-destructive">
-                  {error}
-                </TableCell>
-              </TableRow>
-            ) : users.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center">
-                  No users found
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map((user) => (
-                <TableRow 
-                  key={user.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedUserId(user.id)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={user.imageUrl || undefined} />
-                        <AvatarFallback>
-                          {getInitials(user.firstName, user.lastName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>
-                        {user.firstName || user.lastName
-                          ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
-                          : "N/A"}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {user.emailAddresses.find(
-                      (email) => email.id === user.primaryEmailAddressId
-                    )?.emailAddress || "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={user.publicMetadata.role ? "default" : "secondary"}>
-                      {capitalizeRole(user.publicMetadata.role)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleRoleChange(user.id, "makeAdmin")}
-                          disabled={user.publicMetadata.role === "admin"}
-                        >
-                          Make Admin
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleRoleChange(user.id, "removeRole")}
-                          disabled={!user.publicMetadata.role}
-                        >
-                          Remove Role
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">
+                    Loading...
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-destructive">
+                    {error}
+                  </TableCell>
+                </TableRow>
+              ) : users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">
+                    No users found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow 
+                    key={user.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedUserId(user.id)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={user.imageUrl || undefined} />
+                          <AvatarFallback>
+                            {getInitials(user.firstName, user.lastName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {user.firstName || user.lastName
+                            ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {user.emailAddresses.find(
+                        (email) => email.id === user.primaryEmailAddressId
+                      )?.emailAddress || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.publicMetadata.role ? "default" : "secondary"}>
+                        {capitalizeRole(user.publicMetadata.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleMessageUser(user.id)
+                          }}
+                          className="h-8 w-8"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          <span className="sr-only">Message user</span>
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRoleChange(user.id, "makeAdmin")
+                              }}
+                              disabled={user.publicMetadata.role === "admin"}
+                            >
+                              Make Admin
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRoleChange(user.id, "removeRole")
+                              }}
+                              disabled={!user.publicMetadata.role}
+                            >
+                              Remove Role
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      <UserDetailsModal
-        userId={selectedUserId}
-        onClose={() => setSelectedUserId(null)}
-      />
-    </div>
+        <UserDetailsModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
+      </div>
+    </Shell>
   )
 } 
