@@ -1,5 +1,4 @@
 import { Suspense } from "react"
-import { AppointmentProvider } from "@/contexts/AppointmentContext"
 import { ChatBubble } from "@/components/messages/chat-bubble"
 import {
   Breadcrumb,
@@ -17,6 +16,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AppSidebar } from "@/components/app-sidebar"
 import { NotificationButton } from "@/components/buttons/notification-button"
 import { DashboardContent } from "@/components/dashboard/dashboard-content"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Client Dashboard",
+  description: "Client Dashboard",
+}
 
 export default function Page() {
   return (

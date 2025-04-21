@@ -6,11 +6,14 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Shell } from "@/components/ui/shell"
 import AdminSidebar from "@/components/admin/sidebar"
 import { NotificationButton } from "@/components/buttons/notification-button"
-import { AdminBreadcrumb } from "@/components/admin/breadcrumb"
+import { Metadata } from "next"
 
+export const metadata: Metadata = {
+  title: "Admin Page",
+  description: "Admin Page",
+}
 export default async function AdminLayout({
   children,
 }: {

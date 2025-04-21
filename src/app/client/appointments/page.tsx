@@ -1,5 +1,4 @@
 import { Suspense } from "react"
-import { AppointmentProvider } from "@/contexts/AppointmentContext"
 import { ChatBubble } from "@/components/messages/chat-bubble"
 import {
   Breadcrumb,
@@ -17,6 +16,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppointmentList } from "@/components/appointment-list"
 import { NotificationButton } from "@/components/buttons/notification-button"
+import { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Client Appointments",
+  description: "Client Appointments",
+}
 
 export default function Page() {
   return (
