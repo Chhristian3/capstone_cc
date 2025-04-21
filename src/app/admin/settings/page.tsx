@@ -186,6 +186,10 @@ export default function SettingsPage() {
                     backgroundColor: 'rgb(239 68 68 / 0.2)',
                     color: 'rgb(239 68 68)',
                     fontWeight: 'bold',
+                    pointerEvents: 'none', 
+                    userSelect: 'none',
+                    opacity: 0.8,  
+                    textDecoration: 'line-through',   
                   },
                   disabled: {
                     backgroundColor: 'rgb(156 163 175 / 0.2)',
