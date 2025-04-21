@@ -26,7 +26,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors">
                 <div className="w-2 h-2 rounded-full bg-primary" />
-                <span className="font-medium">Automated reminders and follow-ups</span>
+                <span className="font-medium">Seamless customer messaging</span>
               </div>
               <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors">
                 <div className="w-2 h-2 rounded-full bg-primary" />
