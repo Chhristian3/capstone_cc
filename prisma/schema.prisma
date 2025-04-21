@@ -132,3 +132,22 @@ model Message {
   @@map(name: "messages")
   @@index([senderId])
 }
+
+enum DateStatus {
+  WHOLE_DAY
+  HALF_DAY
+  DISABLED
+}
+
+model SelectedDate {
+  id          String     @id @default(cuid())
+  date        DateTime   @unique
+  status      DateStatus
+  startTime   DateTime?  @map(name: "start_time")
+  endTime     DateTime?  @map(name: "end_time")
+  reason      String?
+  createdAt   DateTime   @default(now()) @map(name: "created_at")
+  updatedAt   DateTime   @updatedAt @map(name: "updated_at")
+
+  @@map(name: "selected_dates")
+}
