@@ -2,8 +2,19 @@ import { NextResponse } from "next/server"
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 
 const isAdminRoute = createRouteMatcher(["/admin(.*)"])
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/webhooks(.*)",
+])
 
 export default clerkMiddleware(async (auth, req) => {
+  // Allow public routes
+  if (isPublicRoute(req)) {
+    return NextResponse.next()
+  }
+
   // Protect all routes starting with `/admin`
   if (
     isAdminRoute(req) &&

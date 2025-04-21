@@ -46,8 +46,20 @@ import { FeedbackDialog } from "@/components/feedback-dialog"
 import { type Appointment, type RatingValue } from "@/contexts/AppointmentContext"
 import { AddAppointmentButton } from "@/components/buttons/add-appointment-button"
 import { format } from "date-fns"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 
 type AppointmentStatus = "PENDING" | "SCHEDULED" | "COMPLETED" | "CANCELLED"
+
+const CANCELLATION_REASONS = [
+  { id: "schedule-conflict", label: "Schedule conflict" },
+  { id: "personal-emergency", label: "Personal emergency" },
+  { id: "double-booked", label: "Double booked" },
+  { id: "changed-mind", label: "Changed my mind" },
+  { id: "other", label: "Other reason" },
+] as const
+
+type CancellationReasonId = typeof CANCELLATION_REASONS[number]["id"]
 
 export function AppointmentList() {
   const { userAppointments: appointments, updateAppointment } = useAppointments()
@@ -65,6 +77,7 @@ export function AppointmentList() {
   const [isRemarksDialogOpen, setIsRemarksDialogOpen] = useState(false)
   const [userRemarks, setUserRemarks] = useState("")
   const [isAddingRemarks, setIsAddingRemarks] = useState(false)
+  const [selectedReasonId, setSelectedReasonId] = useState<CancellationReasonId | null>(null)
 
   const filteredAndSortedAppointments = [...appointments]
     .filter((appointment) => statusFilter === "all" || appointment.status === statusFilter)
@@ -92,20 +105,37 @@ export function AppointmentList() {
   }
 
   const handleCancelAppointment = async () => {
-    if (!appointmentToCancel || !cancellationReason) return
+    if (!appointmentToCancel || !selectedReasonId) return
 
     try {
       setCancellingAppointments(prev => new Set([...Array.from(prev), appointmentToCancel.id]))
-      await updateAppointment({
-        ...appointmentToCancel,
-        status: "CANCELLED",
-        cancellationReason
+      const reason = selectedReasonId === "other" ? cancellationReason : CANCELLATION_REASONS.find(r => r.id === selectedReasonId)?.label || ""
+      
+      const response = await fetch(`/api/appointments?id=${appointmentToCancel.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...appointmentToCancel,
+          status: "CANCELLED",
+          cancellationReason: reason,
+        }),
       })
+
+      if (!response.ok) {
+        throw new Error("Failed to cancel appointment")
+      }
+
+      const updatedAppointment = await response.json()
+      await updateAppointment(updatedAppointment)
       toast.success("Appointment cancelled successfully")
       setAppointmentToCancel(null)
       setOpenCancelDialogId(null)
       setCancellationReason("")
+      setSelectedReasonId(null)
     } catch (error) {
+      console.error("Error cancelling appointment:", error)
       toast.error("Failed to cancel appointment")
     } finally {
       setCancellingAppointments(prev => {
@@ -434,17 +464,43 @@ export function AppointmentList() {
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <label htmlFor="reason" className="text-sm font-medium">
+                          <label className="text-sm font-medium">
                             Reason for cancellation <span className="text-destructive">*</span>
                           </label>
-                          <textarea
-                            id="reason"
-                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholder="Please provide a reason for cancelling this appointment..."
-                            value={cancellationReason}
-                            onChange={(e) => setCancellationReason(e.target.value)}
-                            required
-                          />
+                          <RadioGroup
+                            value={selectedReasonId || ""}
+                            onValueChange={(value) => {
+                              setSelectedReasonId(value as CancellationReasonId)
+                              if (value !== "other") {
+                                setCancellationReason("")
+                              }
+                            }}
+                            className="grid gap-2"
+                          >
+                            {CANCELLATION_REASONS.map((reason) => (
+                              <div key={reason.id} className="flex items-center space-x-2">
+                                <RadioGroupItem value={reason.id} id={reason.id} />
+                                <Label htmlFor={reason.id} className="text-sm font-normal">
+                                  {reason.label}
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                          {selectedReasonId === "other" && (
+                            <div className="mt-4 space-y-2">
+                              <label htmlFor="custom-reason" className="text-sm font-medium">
+                                Please specify your reason
+                              </label>
+                              <textarea
+                                id="custom-reason"
+                                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                placeholder="Please provide a reason for cancelling this appointment..."
+                                value={cancellationReason}
+                                onChange={(e) => setCancellationReason(e.target.value)}
+                                required
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                       <DialogFooter>
@@ -456,11 +512,11 @@ export function AppointmentList() {
                         <Button 
                           variant="destructive" 
                           onClick={handleCancelAppointment}
-                          disabled={!cancellationReason.trim() || cancellingAppointments.has(appointmentToCancel?.id || "")}
+                          disabled={!selectedReasonId || (selectedReasonId === "other" && !cancellationReason.trim()) || cancellingAppointments.has(appointmentToCancel?.id || "")}
                         >
                           {cancellingAppointments.has(appointmentToCancel?.id || "") ? (
                             <>
-                              <div className="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Cancelling...
                             </>
                           ) : (

@@ -189,7 +189,36 @@ export function MessageChat() {
     if (isClient) {
       return (
         <div className="flex flex-col items-center justify-center h-full gap-4 p-4">
-          <p className="text-muted-foreground">Select a conversation to start messaging.</p>
+          <div className="w-full max-w-md space-y-4">
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-semibold">Need Help?</h3>
+              <p className="text-sm text-muted-foreground">
+                Have any concerns or questions? Our support team is here to help you.
+              </p>
+            </div>
+            <form onSubmit={handleStartConversation} className="space-y-4">
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Type your message here..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  className="w-full"
+                  disabled={isSubmitting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Our support team will get back to you as soon as possible.
+                </p>
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isSubmitting || !newMessage.trim()}
+              >
+                {isSubmitting ? "Sending..." : "Send Message"}
+              </Button>
+            </form>
+          </div>
         </div>
       )
     }
