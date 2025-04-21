@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
+import { DateStatus } from "@prisma/client"
 
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,15 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 
+interface SelectedDate {
+  id: string
+  date: string
+  status: DateStatus
+  startTime: string | null
+  endTime: string | null
+  reason: string | null
+}
+
 type FormData = {
   title: string
   appointmentDate: string
@@ -36,67 +46,109 @@ type FormData = {
   description?: string
 }
 
-const formSchema = z
-  .object({
-    title: z.string().min(1, { message: "Title is required" }),
-    appointmentDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-      message: "Please enter a valid date and time.",
-    }),
-    appointmentEndDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-      message: "Please enter a valid end date and time.",
-    }),
-    serviceTypeId: z.string().min(1, {
-      message: "Please select a service type.",
-    }),
-    description: z
-      .string()
-      .max(500, {
-        message: "Description must not exceed 500 characters.",
-      })
-      .optional(),
-  })
-  .superRefine((data: FormData, ctx: z.RefinementCtx) => {
-    const start = new Date(data.appointmentDate)
-    const end = new Date(data.appointmentEndDate)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    const maxDate = new Date()
-    maxDate.setDate(maxDate.getDate() + 30)
-    maxDate.setHours(23, 59, 59, 999)
+function formSchema(selectedDates: SelectedDate[]): z.ZodType<FormData> {
+  return z
+    .object({
+      title: z.string().min(1, { message: "Title is required" }),
+      appointmentDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+        message: "Please enter a valid date and time.",
+      }),
+      appointmentEndDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
+        message: "Please enter a valid end date and time.",
+      }),
+      serviceTypeId: z.string().min(1, {
+        message: "Please select a service type.",
+      }),
+      description: z
+        .string()
+        .max(500, {
+          message: "Description must not exceed 500 characters.",
+        })
+        .optional(),
+    })
+    .superRefine((data: FormData, ctx: z.RefinementCtx) => {
+      const start = new Date(data.appointmentDate)
+      const end = new Date(data.appointmentEndDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const maxDate = new Date()
+      maxDate.setDate(maxDate.getDate() + 30)
+      maxDate.setHours(23, 59, 59, 999)
 
-    if (start < today) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Cannot create appointments in the past",
-        path: ["appointmentDate"],
-      })
-    }
+      if (start < today) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Cannot create appointments in the past",
+          path: ["appointmentDate"],
+        })
+      }
 
-    if (start > maxDate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Cannot create appointments more than 30 days in advance",
-        path: ["appointmentDate"],
-      })
-    }
+      if (start > maxDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Cannot create appointments more than 30 days in advance",
+          path: ["appointmentDate"],
+        })
+      }
 
-    if (end <= start) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "End time must be after start time",
-        path: ["appointmentEndDate"],
-      })
-    }
+      if (end <= start) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "End time must be after start time",
+          path: ["appointmentEndDate"],
+        })
+      }
 
-    if (start.toDateString() !== end.toDateString()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Appointments must start and end on the same day",
-        path: ["appointmentEndDate"],
-      })
-    }
-  })
+      if (start.toDateString() !== end.toDateString()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Appointments must start and end on the same day",
+          path: ["appointmentEndDate"],
+        })
+      }
+
+      // Check against selected dates
+      const selectedDate = selectedDates.find(
+        (sd) => new Date(sd.date).toDateString() === start.toDateString()
+      )
+
+      if (selectedDate) {
+        // If the date is disabled, prevent any appointments
+        if (selectedDate.status === DateStatus.DISABLED) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "This date is disabled for appointments",
+            path: ["appointmentDate"],
+          })
+        }
+
+        // If the date has specific time constraints
+        if (selectedDate.startTime && selectedDate.endTime) {
+          const startTime = new Date(selectedDate.startTime)
+          const endTime = new Date(selectedDate.endTime)
+
+          // Check if appointment start time is within allowed range
+          if (start < startTime || start > endTime) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Appointment must start between ${startTime.toLocaleTimeString()} and ${endTime.toLocaleTimeString()}`,
+              path: ["appointmentDate"],
+            })
+          }
+
+          // Check if appointment end time is within allowed range
+          if (end < startTime || end > endTime) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Appointment must end between ${startTime.toLocaleTimeString()} and ${endTime.toLocaleTimeString()}`,
+              path: ["appointmentEndDate"],
+            })
+          }
+        }
+      }
+    }) as z.ZodType<FormData>
+}
 
 async function getServiceTypes() {
   const res = await fetch("/api/service-types")
@@ -116,12 +168,28 @@ export function AddAppointmentForm({
   selectedDate,
 }: AddAppointmentFormProps) {
   const [serviceTypes, setServiceTypes] = useState<any[]>([])
+  const [selectedDates, setSelectedDates] = useState<SelectedDate[]>([])
   const { toast } = useToast()
   const { user } = useUser()
   const { addAppointment } = useAppointments()
 
+  // Fetch selected dates
+  useEffect(() => {
+    const fetchSelectedDates = async () => {
+      try {
+        const response = await fetch("/api/settings/date")
+        const data = await response.json()
+        setSelectedDates(data)
+      } catch (error) {
+        console.error("Failed to fetch selected dates:", error)
+      }
+    }
+    fetchSelectedDates()
+  }, [])
+
+  const schema = formSchema(selectedDates)
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       title: "",
       appointmentDate: selectedDate ? selectedDate.toISOString() : "",
@@ -166,7 +234,7 @@ export function AddAppointmentForm({
     }
   }, [selectedDate, form])
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(data: FormData): Promise<void> {
     try {
       // Validate the selected date is not disabled
       if (selectedDate) {
@@ -187,10 +255,10 @@ export function AddAppointmentForm({
 
       // @ts-ignore
       const appointment = await addAppointment({
-        ...values,
+        ...data,
         customerName: user?.fullName || "Unknown",
         expirationDate: new Date(
-          new Date(values.appointmentEndDate).getTime() + 60 * 60 * 1000
+          new Date(data.appointmentEndDate).getTime() + 60 * 60 * 1000
         ).toISOString(),
       })
 
@@ -199,19 +267,19 @@ export function AddAppointmentForm({
         description: (
           <div>
             <p>
-              <strong>Title:</strong> {values.title}
+              <strong>Title:</strong> {data.title}
             </p>
             <p>
               <strong>Start:</strong>{" "}
-              {new Date(values.appointmentDate).toLocaleString()}
+              {new Date(data.appointmentDate).toLocaleString()}
             </p>
             <p>
               <strong>End:</strong>{" "}
-              {new Date(values.appointmentEndDate).toLocaleString()}
+              {new Date(data.appointmentEndDate).toLocaleString()}
             </p>
-            {values.description && (
+            {data.description && (
               <p>
-                <strong>Description:</strong> {values.description}
+                <strong>Description:</strong> {data.description}
               </p>
             )}
           </div>
@@ -310,6 +378,21 @@ export function AddAppointmentForm({
                       form.setValue("appointmentEndDate", endDate.toISOString())
                     }
                   }}
+                  disabledDates={selectedDates
+                    .filter((sd) => sd.status === DateStatus.DISABLED)
+                    .map((sd) => new Date(sd.date))}
+                  timeConstraints={(date) => {
+                    const selectedDate = selectedDates.find(
+                      (sd) => new Date(sd.date).toDateString() === date.toDateString()
+                    )
+                    if (selectedDate?.startTime && selectedDate?.endTime) {
+                      return {
+                        start: new Date(selectedDate.startTime),
+                        end: new Date(selectedDate.endTime),
+                      }
+                    }
+                    return undefined
+                  }}
                 />
               </FormControl>
               <FormMessage />
@@ -333,6 +416,21 @@ export function AddAppointmentForm({
                       const startDate = new Date(date.getTime() - 60 * 60 * 1000) // 1 hour before
                       form.setValue("appointmentDate", startDate.toISOString())
                     }
+                  }}
+                  disabledDates={selectedDates
+                    .filter((sd) => sd.status === DateStatus.DISABLED)
+                    .map((sd) => new Date(sd.date))}
+                  timeConstraints={(date) => {
+                    const selectedDate = selectedDates.find(
+                      (sd) => new Date(sd.date).toDateString() === date.toDateString()
+                    )
+                    if (selectedDate?.startTime && selectedDate?.endTime) {
+                      return {
+                        start: new Date(selectedDate.startTime),
+                        end: new Date(selectedDate.endTime),
+                      }
+                    }
+                    return undefined
                   }}
                 />
               </FormControl>

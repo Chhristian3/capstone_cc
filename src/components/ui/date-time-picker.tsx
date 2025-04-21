@@ -14,18 +14,31 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { CalendarIcon } from "lucide-react";
 
+interface TimeConstraints {
+  start: Date;
+  end: Date;
+}
+
 interface DateTimePickerProps {
   date?: Date;
   onSelect: (date: Date) => void;
   isEndDate?: boolean;
+  disabledDates?: Date[];
+  timeConstraints?: (date: Date) => TimeConstraints | undefined;
 }
 
-export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePickerProps) {
+export function DateTimePicker({ 
+  date, 
+  onSelect, 
+  isEndDate = false,
+  disabledDates = [],
+  timeConstraints
+}: DateTimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
-  const hours = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
+  const hours = Array.from({ length: 24 }, (_, i) => i); // All hours in a day
 
-  const disabledDates = (date: Date) => {
+  const isDateDisabled = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -33,13 +46,32 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
     maxDate.setDate(maxDate.getDate() + 30);
     maxDate.setHours(23, 59, 59, 999);
 
-    return date < today || date > maxDate;
+    // Check if date is in disabledDates array
+    const isInDisabledDates = disabledDates.some(
+      (disabledDate) => disabledDate.toDateString() === date.toDateString()
+    );
+
+    return date < today || date > maxDate || isInDisabledDates;
   };
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
-    if (selectedDate && !disabledDates(selectedDate)) {
-      // Set initial time to 8 AM for start date, 9 AM for end date
-      selectedDate.setHours(isEndDate ? 9 : 8, 0, 0, 0);
+    if (selectedDate && !isDateDisabled(selectedDate)) {
+      // Get time constraints for the selected date
+      const constraints = timeConstraints?.(selectedDate);
+      
+      if (constraints) {
+        // Set initial time to the start of the allowed time range
+        selectedDate.setHours(
+          constraints.start.getHours(),
+          constraints.start.getMinutes(),
+          0,
+          0
+        );
+      } else {
+        // Default to 8 AM for start date, 9 AM for end date if no constraints
+        selectedDate.setHours(isEndDate ? 9 : 8, 0, 0, 0);
+      }
+      
       onSelect(selectedDate);
     }
   };
@@ -50,16 +82,39 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
   ) => {
     if (date) {
       const newDate = new Date(date);
+      const constraints = timeConstraints?.(newDate);
+      
       if (type === "hour") {
         const hour = parseInt(value);
         const isPM = newDate.getHours() >= 12;
         // Convert to 24-hour format while maintaining AM/PM
         const newHour = isPM ? (hour % 12) + 12 : hour % 12;
-        if (newHour >= 8 && newHour <= 17) {
-          newDate.setHours(newHour);
+        
+        if (constraints) {
+          // Ensure hour is within constraints
+          const minHour = constraints.start.getHours();
+          const maxHour = constraints.end.getHours();
+          if (newHour >= minHour && newHour <= maxHour) {
+            newDate.setHours(newHour);
+          }
+        } else {
+          // Default behavior if no constraints
+          if (newHour >= 8 && newHour <= 17) {
+            newDate.setHours(newHour);
+          }
         }
       } else if (type === "minute") {
-        newDate.setMinutes(parseInt(value));
+        const minute = parseInt(value);
+        if (constraints) {
+          // Ensure minute is within constraints
+          const minMinute = constraints.start.getMinutes();
+          const maxMinute = constraints.end.getMinutes();
+          if (minute >= minMinute && minute <= maxMinute) {
+            newDate.setMinutes(minute);
+          }
+        } else {
+          newDate.setMinutes(minute);
+        }
       } else if (type === "ampm") {
         const currentHours = newDate.getHours();
         if (value === "PM") {
@@ -76,6 +131,17 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
   };
 
   const isHourDisabled = (hour: number, isPM: boolean) => {
+    if (!date) return false;
+    
+    const constraints = timeConstraints?.(date);
+    if (constraints) {
+      const minHour = constraints.start.getHours();
+      const maxHour = constraints.end.getHours();
+      const hour24 = isPM ? (hour % 12) + 12 : hour % 12;
+      return hour24 < minHour || hour24 > maxHour;
+    }
+
+    // Default behavior if no constraints
     if (isEndDate && hour === 8) {
       return true; // Always disable 8 AM for end date
     }
@@ -96,7 +162,7 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
-        type="button"
+          type="button"
           variant="outline"
           className={cn(
             "w-full justify-start text-left font-normal",
@@ -111,14 +177,14 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
+      <PopoverContent className="w-auto p-0" align="start">
         <div className="sm:flex">
           <Calendar
             mode="single"
             selected={date}
             onSelect={handleDateSelect}
             initialFocus
-            disabled={disabledDates}
+            disabled={isDateDisabled}
           />
           <div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x">
             <ScrollArea className="w-64 sm:w-auto">
@@ -128,7 +194,7 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
                   const isDisabled = isHourDisabled(hour, isPM);
                   return (
                     <Button
-                    type="button"
+                      type="button"
                       key={hour}
                       size="icon"
                       variant={
@@ -154,7 +220,7 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
               <div className="flex sm:flex-col p-2">
                 {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
                   <Button
-                  type="button"
+                    type="button"
                     key={minute}
                     size="icon"
                     variant={
@@ -173,7 +239,7 @@ export function DateTimePicker({ date, onSelect, isEndDate = false }: DateTimePi
               </div>
               <ScrollBar orientation="horizontal" className="sm:hidden" />
             </ScrollArea>
-            <ScrollArea className="">
+            <ScrollArea className="w-64 sm:w-auto">
               <div className="flex sm:flex-col p-2">
                 {["AM", "PM"].map((ampm) => {
                   const currentHour = date?.getHours() ?? 0;
