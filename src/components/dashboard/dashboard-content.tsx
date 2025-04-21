@@ -59,7 +59,7 @@ export function DashboardContent() {
             Good {currentTime ? (currentTime.getHours() < 12 ? "morning" : currentTime.getHours() < 18 ? "afternoon" : "evening") : ""}, {user?.firstName || "there"}
           </h1>
           <p className="text-muted-foreground">
-            Here's what's happening with your account today.
+            Here&apos;s what&apos;s happening with your account today.
           </p>
         </div>
         <div className="flex items-center gap-6">
@@ -71,7 +71,7 @@ export function DashboardContent() {
           </div>
           <div className="h-8 w-px bg-border" />
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-muted-foreground">Today's Date</span>
+            <span className="text-sm font-medium text-muted-foreground">Today&apos;s Date</span>
             <div className="text-lg">
               {currentTime ? format(currentTime, "EEEE, MMMM d, yyyy") : "Loading..."}
             </div>
