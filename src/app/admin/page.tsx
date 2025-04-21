@@ -109,7 +109,7 @@ export default async function AdminDashboard() {
   try {
     const isAdmin = await checkRole("admin")
     if (!isAdmin) {
-      redirect("/")
+      redirect("/client/dashboard")
     }
 
     const { serviceTypes, appointments, users, recentAppointments, averageRating, completedAppointments, sentimentDistribution, averageSentimentScore, totalSentiments, sentimentStatus } = await getDashboardData()
