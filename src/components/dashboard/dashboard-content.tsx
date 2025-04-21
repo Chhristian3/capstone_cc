@@ -32,21 +32,17 @@ export function DashboardContent() {
       .then((res) => res.json())
       .then((data) => setNotifications(data.slice(0, 5)))
 
-    // Placeholder announcements
-    setAnnouncements([
-      {
-        id: "1",
-        title: "Welcome to the New Dashboard",
-        content: "We've updated our dashboard to provide a better experience for our clients.",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "2",
-        title: "System Maintenance",
-        content: "There will be scheduled maintenance on Saturday at 2 AM.",
-        createdAt: new Date().toISOString(),
-      },
-    ])
+    // Fetch announcements with a limit of 5
+    fetch("/api/announcements?limit=5")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error) {
+          setAnnouncements(data)
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching announcements:", error)
+      })
 
     return () => clearInterval(timer)
   }, [])

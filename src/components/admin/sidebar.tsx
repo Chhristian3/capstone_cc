@@ -10,6 +10,7 @@ import {
   Package,
   BarChart,
   MessageSquare,
+  Bell,
 } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 import {
@@ -54,6 +55,11 @@ const navigation = [
     name: "Messages",
     href: "/admin/messages",
     icon: MessageSquare,
+  },
+  {
+    name: "Announcements",
+    href: "/admin/announcements",
+    icon: Bell,
   },
   {
     name: "Reports",
