@@ -318,9 +318,12 @@ export function AddAppointmentForm({
       
       // Check if the error is a time slot conflict
       if (errorMessage.includes("Time slot conflict")) {
+        const formattedStart = new Date(error.conflictData.start).toLocaleString();
+        const formattedEnd = new Date(error.conflictData.end).toLocaleString();
+        
         toast({
           title: "Time Slot Conflict",
-          description: errorMessage,
+          description: `Time slot already booked: ${formattedStart} - ${formattedEnd}`,
           variant: "destructive",
         })
       } else if (errorMessage.includes("Unauthorized")) {

@@ -143,10 +143,14 @@ export async function POST(req: NextRequest) {
     })
 
     if (conflictingAppointment) {
-      const conflictStart = new Date(conflictingAppointment.appointmentDate).toLocaleString()
-      const conflictEnd = new Date(conflictingAppointment.appointmentEndDate).toLocaleString()
       return NextResponse.json(
-        { error: `Time slot already booked: ${conflictStart} - ${conflictEnd}` },
+        { 
+          error: "Time slot conflict",
+          conflictData: {
+            start: conflictingAppointment.appointmentDate,
+            end: conflictingAppointment.appointmentEndDate
+          }
+        },
         { status: 409 }
       )
     }
