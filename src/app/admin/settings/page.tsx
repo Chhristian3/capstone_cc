@@ -105,8 +105,8 @@ export default function SettingsPage() {
     try {
       // Ensure we're using the correct date format without timezone offset
       const selectedDate = date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : undefined
-      const startDateTime = `${selectedDate}T${startTime}:00`
-      const endDateTime = `${selectedDate}T${endTime}:00`
+      const startDateTime = new Date(`${selectedDate}T${startTime}:00`).toISOString()
+      const endDateTime = new Date(`${selectedDate}T${endTime}:00`).toISOString()
 
       const response = await fetch("/api/settings/date", {
         method: "POST",
