@@ -33,17 +33,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert string dates to Date objects
-    const parsedDate = new Date(date);
-    const parsedStartTime = startTime ? new Date(startTime) : null;
-    const parsedEndTime = endTime ? new Date(endTime) : null;
+
 
     const selectedDate = await prisma.selectedDate.create({
       data: {
-        date: parsedDate,
+        date: new Date(date),
         status,
-        startTime: parsedStartTime,
-        endTime: parsedEndTime,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
         reason
       }
     });

@@ -104,7 +104,7 @@ export default function SettingsPage() {
 
     try {
       // Ensure we're using the correct date format without timezone offset
-      const selectedDate = date ? new Date(date.getTime()).toISOString().split('T')[0] : undefined
+      const selectedDate = date ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split('T')[0] : undefined
       const startDateTime = `${selectedDate}T${startTime}:00`
       const endDateTime = `${selectedDate}T${endTime}:00`
 
