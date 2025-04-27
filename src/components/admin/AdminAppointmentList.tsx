@@ -19,6 +19,7 @@ import {
   MessageSquarePlus,
   ShieldIcon,
   Loader2,
+  CreditCard,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -649,6 +650,17 @@ export function AdminAppointmentList() {
                       <p className="text-sm">{appointment.customerName}</p>
                     </div>
                   </div>
+                  {appointment.referenceNumber && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <CreditCard className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Payment Reference</p>
+                        <p className="text-sm">Last 4 digits: {appointment.referenceNumber}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">

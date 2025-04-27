@@ -36,31 +36,31 @@ async function createAppointmentNotification(
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = getAuth(req)
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized: User must be logged in to create an appointment" }, { status: 401 })
-  }
-
   try {
+    const { userId } = getAuth(req)
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const body = await req.json()
-    
+    const { title, customerName, appointmentDate, appointmentEndDate, description, serviceTypeId, referenceNumber } = body
+
     // Validate required fields
-    if (!body.title) {
+    if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
     }
-    if (!body.appointmentDate) {
+    if (!appointmentDate) {
       return NextResponse.json({ error: "Start time is required" }, { status: 400 })
     }
-    if (!body.appointmentEndDate) {
+    if (!appointmentEndDate) {
       return NextResponse.json({ error: "End time is required" }, { status: 400 })
     }
-    if (!body.serviceTypeId) {
+    if (!serviceTypeId) {
       return NextResponse.json({ error: "Service type is required" }, { status: 400 })
     }
 
-    const newAppointmentStart = new Date(body.appointmentDate)
-    const newAppointmentEnd = new Date(body.appointmentEndDate)
+    const newAppointmentStart = new Date(appointmentDate)
+    const newAppointmentEnd = new Date(appointmentEndDate)
     const currentDate = new Date()
     const maxDate = new Date()
     maxDate.setDate(maxDate.getDate() + 30)
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
 
     // Validate service type exists
     const serviceType = await prisma.serviceType.findUnique({
-      where: { id: body.serviceTypeId },
+      where: { id: serviceTypeId },
     })
 
     if (!serviceType) {
@@ -170,14 +170,15 @@ export async function POST(req: NextRequest) {
     const appointment = await prisma.appointment.create({
       data: {
         userId,
-        title: body.title,
-        customerName: body.customerName,
+        title,
+        customerName,
         appointmentDate: newAppointmentStart,
         appointmentEndDate: newAppointmentEnd,
         expirationDate: new Date(newAppointmentEnd.getTime() + 60 * 60 * 1000),
-        description: body.description,
+        description,
+        referenceNumber,
         serviceType: {
-          connect: { id: body.serviceTypeId },
+          connect: { id: serviceTypeId },
         },
       },
       include: {
@@ -192,7 +193,7 @@ export async function POST(req: NextRequest) {
         recipientType: "ADMIN_ONLY",
         type: "APPOINTMENT",
         title: "New Appointment Created",
-        content: `New appointment created for ${body.customerName} on ${newAppointmentStart.toLocaleDateString()}`,
+        content: `New appointment created for ${customerName} on ${newAppointmentStart.toLocaleDateString()}`,
         referenceId: appointment.id,
       },
     })

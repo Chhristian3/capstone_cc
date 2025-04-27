@@ -37,7 +37,7 @@ export function NotificationButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="relative">
+        <Button variant="outline" size="icon" className="relative h-10 w-10 min-w-0 min-h-0 p-0 sm:h-10 sm:w-10">
           <BellIcon className="h-4 w-4" />
           {notifications.length > 0 && (
             <Badge variant="destructive" className="absolute -right-1 -top-1 size-4 rounded-full p-0 text-[10px]">

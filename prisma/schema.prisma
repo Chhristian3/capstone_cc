@@ -32,6 +32,7 @@ model Appointment {
   expirationDate DateTime
   serviceTypeId  String     @map(name: "service_type_id")
   description    String?
+  referenceNumber String?   @map(name: "reference_number")
   status        AppointmentStatus @default(PENDING)
   rating         Rating?    
   cancellationReason String? @map(name: "cancellation_reason")

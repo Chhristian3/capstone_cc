@@ -163,9 +163,22 @@ export default function UsersPage() {
   }
 
   const capitalizeRole = (role: string | null | undefined) => {
-    if (!role) return "N/A"
+    if (!role || role === "moderator") return "Client"
     return role.charAt(0).toUpperCase() + role.slice(1)
   }
+
+  const getRoleBadgeVariant = (role: string | null | undefined) => {
+    if (role === "admin") return "default"
+    return "outline"
+  }
+
+  const getRoleBadgeStyle = (role: string | null | undefined) => {
+    if (role === "admin") return {}
+    return { backgroundColor: "white", color: "black" }
+  }
+
+  const adminUsers = users.filter(user => user.publicMetadata.role === "admin")
+  const clientUsers = users.filter(user => user.publicMetadata.role !== "admin")
 
   return (
     <Shell>
@@ -190,69 +203,74 @@ export default function UsersPage() {
           <Button type="submit">Search</Button>
         </form>
 
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+        {/* Client Users Table */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold">Clients</h3>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">
-                    Loading...
-                  </TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
-              ) : error ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-destructive">
-                    {error}
-                  </TableCell>
-                </TableRow>
-              ) : users.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center">
-                    No users found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                users.map((user) => (
-                  <TableRow 
-                    key={user.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedUserId(user.id)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={user.imageUrl || undefined} />
-                          <AvatarFallback>
-                            {getInitials(user.firstName, user.lastName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>
-                          {user.firstName || user.lastName
-                            ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
-                            : "N/A"}
-                        </span>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      Loading...
                     </TableCell>
-                    <TableCell>
-                      {user.emailAddresses.find(
-                        (email) => email.id === user.primaryEmailAddressId
-                      )?.emailAddress || "N/A"}
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-destructive">
+                      {error}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={user.publicMetadata.role ? "default" : "secondary"}>
-                        {capitalizeRole(user.publicMetadata.role)}
-                      </Badge>
+                  </TableRow>
+                ) : clientUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      No clients found
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                  </TableRow>
+                ) : (
+                  clientUsers.map((user) => (
+                    <TableRow 
+                      key={user.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => setSelectedUserId(user.id)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={user.imageUrl || undefined} />
+                            <AvatarFallback>
+                              {getInitials(user.firstName, user.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>
+                            {user.firstName || user.lastName
+                              ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                              : "N/A"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {user.emailAddresses.find(
+                          (email) => email.id === user.primaryEmailAddressId
+                        )?.emailAddress || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={getRoleBadgeVariant(user.publicMetadata.role)}
+                          style={getRoleBadgeStyle(user.publicMetadata.role)}
+                        >
+                          {capitalizeRole(user.publicMetadata.role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -260,53 +278,111 @@ export default function UsersPage() {
                             e.stopPropagation()
                             handleMessageUser(user.id)
                           }}
-                          className="h-8 w-8"
                         >
                           <MessageSquare className="h-4 w-4" />
-                          <span className="sr-only">Message user</span>
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleRoleChange(user.id, "makeAdmin")
-                              }}
-                              disabled={user.publicMetadata.role === "admin"}
-                            >
-                              Make Admin
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleRoleChange(user.id, "removeRole")
-                              }}
-                              disabled={!user.publicMetadata.role}
-                            >
-                              Remove Role
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
+        {/* Admin Users Table */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold">Administrators</h3>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-destructive">
+                      {error}
+                    </TableCell>
+                  </TableRow>
+                ) : adminUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      No administrators found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  adminUsers.map((user) => (
+                    <TableRow 
+                      key={user.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => setSelectedUserId(user.id)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={user.imageUrl || undefined} />
+                            <AvatarFallback>
+                              {getInitials(user.firstName, user.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>
+                            {user.firstName || user.lastName
+                              ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                              : "N/A"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {user.emailAddresses.find(
+                          (email) => email.id === user.primaryEmailAddressId
+                        )?.emailAddress || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={getRoleBadgeVariant(user.publicMetadata.role)}
+                          style={getRoleBadgeStyle(user.publicMetadata.role)}
+                        >
+                          {capitalizeRole(user.publicMetadata.role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleMessageUser(user.id)
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
+      {selectedUserId && (
         <UserDetailsModal
           userId={selectedUserId}
           onClose={() => setSelectedUserId(null)}
         />
-      </div>
+      )}
     </Shell>
   )
 } 

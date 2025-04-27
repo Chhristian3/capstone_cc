@@ -31,6 +31,7 @@ export interface Appointment {
   cancellationReason?: string
   createdAt: string
   updatedAt: string
+  referenceNumber?: string
 }
 
 type AppointmentContextType = {

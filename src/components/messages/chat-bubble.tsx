@@ -10,9 +10,9 @@ export function ChatBubble() {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-4 right-4 z-50 md:bottom-4 md:right-4">
       {isExpanded ? (
-        <div className="w-[350px] h-[500px] bg-background rounded-lg shadow-lg border flex flex-col">
+        <div className="fixed inset-0 z-50 md:relative md:w-[350px] md:h-[500px] bg-background rounded-lg shadow-lg border flex flex-col">
           <div className="flex items-center justify-between p-3 border-b">
             <h3 className="font-medium">Chat Support</h3>
             <Button

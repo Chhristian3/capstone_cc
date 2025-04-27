@@ -62,7 +62,7 @@ export function AppSidebar() {
             </SignedIn>
             <span className="text-lg">{user?.fullName}</span>
           </div>
-          <SidebarTrigger />
+          <ModeToggle />
         </div>
       </SidebarHeader>
       <SidebarContent>

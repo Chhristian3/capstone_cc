@@ -19,12 +19,18 @@ interface TimeConstraints {
   end: Date;
 }
 
+interface BookedTimeSlot {
+  start: Date;
+  end: Date;
+}
+
 interface DateTimePickerProps {
   date?: Date;
   onSelect: (date: Date) => void;
   isEndDate?: boolean;
   disabledDates?: Date[];
   timeConstraints?: (date: Date) => TimeConstraints | undefined;
+  bookedTimeSlots?: BookedTimeSlot[];
 }
 
 export function DateTimePicker({ 
@@ -32,11 +38,16 @@ export function DateTimePicker({
   onSelect, 
   isEndDate = false,
   disabledDates = [],
-  timeConstraints
+  timeConstraints,
+  bookedTimeSlots = []
 }: DateTimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
-  const hours = Array.from({ length: 24 }, (_, i) => i); // All hours in a day
+  // Default business hours: 8 AM to 5 PM
+  const BUSINESS_HOURS_START = 8;
+  const BUSINESS_HOURS_END = 17;
+
+  const hours = Array.from({ length: BUSINESS_HOURS_END - BUSINESS_HOURS_START + 1 }, (_, i) => i + BUSINESS_HOURS_START); // Only business hours
 
   const isDateDisabled = (date: Date) => {
     const today = new Date();
@@ -98,8 +109,8 @@ export function DateTimePicker({
             newDate.setHours(newHour);
           }
         } else {
-          // Default behavior if no constraints
-          if (newHour >= 8 && newHour <= 17) {
+          // Default behavior if no constraints - restrict to business hours
+          if (newHour >= BUSINESS_HOURS_START && newHour <= BUSINESS_HOURS_END) {
             newDate.setHours(newHour);
           }
         }
@@ -130,6 +141,18 @@ export function DateTimePicker({
     }
   };
 
+  const isTimeSlotBooked = (hour: number, minute: number) => {
+    if (!date) return false;
+    
+    const testTime = new Date(date);
+    testTime.setHours(hour, minute, 0, 0);
+    
+    // Check if this time slot conflicts with any booked time slots
+    return bookedTimeSlots.some(slot => {
+      return testTime >= slot.start && testTime < slot.end;
+    });
+  };
+
   const isHourDisabled = (hour: number, isPM: boolean) => {
     if (!date) return false;
     
@@ -141,17 +164,32 @@ export function DateTimePicker({
       return hour24 < minHour || hour24 > maxHour;
     }
 
-    // Default behavior if no constraints
-    if (isEndDate && hour === 8) {
-      return true; // Always disable 8 AM for end date
+    // Default behavior if no constraints - restrict to business hours
+    const hour24 = isPM ? (hour % 12) + 12 : hour % 12;
+    
+    // Disable hours outside business hours (8 AM to 5 PM)
+    if (hour24 < BUSINESS_HOURS_START || hour24 > BUSINESS_HOURS_END) {
+      return true;
     }
-    if (isPM) {
-      // Disable 8-11 AM in PM mode
-      return hour >= 8 && hour <= 11;
-    } else {
-      // Disable 12-5 PM in AM mode
-      return hour >= 12 && hour <= 17;
+    
+    // For end date, disable hours that would make the appointment end before it starts
+    if (isEndDate && date) {
+      const startHour = date.getHours();
+      if (hour24 <= startHour) {
+        return true;
+      }
     }
+    
+    return false;
+  };
+
+  const isMinuteDisabled = (minute: number) => {
+    if (!date) return false;
+    
+    const hour = date.getHours();
+    
+    // Check if this specific minute is booked
+    return isTimeSlotBooked(hour, minute);
   };
 
   const getDisplayHour = (hour: number) => {
@@ -186,39 +224,40 @@ export function DateTimePicker({
             initialFocus
             disabled={isDateDisabled}
           />
-          <div className="flex flex-col sm:flex-row sm:h-[300px] divide-y sm:divide-y-0 sm:divide-x">
-            <ScrollArea className="w-64 sm:w-auto">
-              <div className="flex sm:flex-col p-2">
-                {hours.map((hour) => {
-                  const isPM = date ? date.getHours() >= 12 : false;
-                  const isDisabled = isHourDisabled(hour, isPM);
-                  return (
-                    <Button
-                      type="button"
-                      key={hour}
-                      size="icon"
-                      variant={
-                        date && date.getHours() === hour
-                          ? "default"
-                          : "ghost"
-                      }
-                      className={cn(
-                        "sm:w-full shrink-0 aspect-square",
-                        isDisabled && "opacity-50 cursor-not-allowed"
-                      )}
-                      onClick={() => !isDisabled && handleTimeChange("hour", hour.toString())}
-                      disabled={isDisabled}
-                    >
-                      {getDisplayHour(hour)}
-                    </Button>
-                  );
-                })}
-              </div>
-              <ScrollBar orientation="horizontal" className="sm:hidden" />
-            </ScrollArea>
-            <ScrollArea className="w-64 sm:w-auto">
-              <div className="flex sm:flex-col p-2">
-                {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => (
+          <ScrollArea className="h-[304px] w-12 sm:w-auto ml-4 mt-2">
+            <div className="flex flex-col">
+              {hours.map((hour) => {
+                const isPM = date ? date.getHours() >= 12 : false;
+                const isDisabled = isHourDisabled(hour, isPM);
+                return (
+                  <Button
+                    type="button"
+                    key={hour}
+                    size="icon"
+                    variant={
+                      date && date.getHours() === hour
+                        ? "default"
+                        : "ghost"
+                    }
+                    className={cn(
+                      "sm:w-full shrink-0 aspect-square",
+                      isDisabled && "opacity-50 cursor-not-allowed"
+                    )}
+                    onClick={() => !isDisabled && handleTimeChange("hour", hour.toString())}
+                    disabled={isDisabled}
+                  >
+                    {getDisplayHour(hour)}
+                  </Button>
+                );
+              })}
+            </div>
+            <ScrollBar orientation="vertical" />
+          </ScrollArea>
+          <ScrollArea className="h-[304px] w-12 sm:w-auto mt-2">
+            <div className="flex flex-col">
+              {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => {
+                const isDisabled = isMinuteDisabled(minute);
+                return (
                   <Button
                     type="button"
                     key={minute}
@@ -228,51 +267,54 @@ export function DateTimePicker({
                         ? "default"
                         : "ghost"
                     }
-                    className="sm:w-full shrink-0 aspect-square"
-                    onClick={() =>
-                      handleTimeChange("minute", minute.toString())
-                    }
+                    className={cn(
+                      "sm:w-full shrink-0 aspect-square",
+                      isDisabled && "opacity-50 cursor-not-allowed"
+                    )}
+                    onClick={() => !isDisabled && handleTimeChange("minute", minute.toString())}
+                    disabled={isDisabled}
                   >
                     {minute.toString().padStart(2, "0")}
                   </Button>
-                ))}
-              </div>
-              <ScrollBar orientation="horizontal" className="sm:hidden" />
-            </ScrollArea>
-            <ScrollArea className="w-64 sm:w-auto">
-              <div className="flex sm:flex-col p-2">
-                {["AM", "PM"].map((ampm) => {
-                  const currentHour = date?.getHours() ?? 0;
-                  const isDisabled = date && (
-                    (ampm === "AM" && currentHour >= 12 && currentHour < 8) ||
-                    (ampm === "PM" && currentHour < 8)
-                  );
-                  return (
-                    <Button
-                      type="button"
-                      key={ampm}
-                      size="icon"
-                      variant={
-                        date &&
-                        ((ampm === "AM" && currentHour < 12) ||
-                          (ampm === "PM" && currentHour >= 12))
-                          ? "default"
-                          : "ghost"
-                      }
-                      className={cn(
-                        "sm:w-full shrink-0 aspect-square",
-                        isDisabled && "opacity-50 cursor-not-allowed"
-                      )}
-                      onClick={() => !isDisabled && handleTimeChange("ampm", ampm)}
-                      disabled={isDisabled}
-                    >
-                      {ampm}
-                    </Button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </div>
+                );
+              })}
+            </div>
+            <ScrollBar orientation="vertical" />
+          </ScrollArea>
+          <ScrollArea className="h-[304px] w-12 sm:w-auto mt-2">
+            <div className="flex flex-col">
+              {["AM", "PM"].map((ampm) => {
+                const currentHour = date?.getHours() ?? 0;
+                const isDisabled = date && (
+                  (ampm === "AM" && currentHour >= 12 && currentHour < BUSINESS_HOURS_START) ||
+                  (ampm === "PM" && currentHour < BUSINESS_HOURS_START)
+                );
+                return (
+                  <Button
+                    type="button"
+                    key={ampm}
+                    size="icon"
+                    variant={
+                      date &&
+                      ((ampm === "AM" && currentHour < 12) ||
+                        (ampm === "PM" && currentHour >= 12))
+                        ? "default"
+                        : "ghost"
+                    }
+                    className={cn(
+                      "sm:w-full shrink-0 aspect-square",
+                      isDisabled && "opacity-50 cursor-not-allowed"
+                    )}
+                    onClick={() => !isDisabled && handleTimeChange("ampm", ampm)}
+                    disabled={isDisabled}
+                  >
+                    {ampm}
+                  </Button>
+                );
+              })}
+            </div>
+            <ScrollBar orientation="vertical" />
+          </ScrollArea>
         </div>
       </PopoverContent>
     </Popover>

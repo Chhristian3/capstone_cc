@@ -33,15 +33,6 @@ export default function LandingPage() {
                 <span className="font-medium">Calendar integration and sync</span>
               </div>
             </div>
-
-            <div className="flex gap-4">
-              <Button asChild size="lg" className="group">
-                <Link href="/sign-in">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
-            </div>
           </div>
 
           {/* Right Content - Login Form */}
@@ -51,10 +42,16 @@ export default function LandingPage() {
               <div className="text-center space-y-4">
                 <h2 className="text-2xl font-semibold">Welcome Back</h2>
               </div>
-              <div className="mt-8">
+              <div className="mt-8 space-y-4">
                 <Button asChild className="w-full" size="lg">
                   <Link href="/sign-in" className="flex items-center justify-center gap-2">
                     Sign In
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild className="w-full" size="lg" variant="outline">
+                  <Link href="/sign-up" className="flex items-center justify-center gap-2">
+                    Create Account
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>

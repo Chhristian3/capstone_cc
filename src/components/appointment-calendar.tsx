@@ -60,20 +60,18 @@ export function AppointmentCalendar({
     }
   }, [selectedDate, appointments])
 
-  const disabledDates = (date: Date) => {
+  // Modifier for out-of-range dates (past or >30 days future)
+  const outOfRangeDates = (date: Date) => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
     const maxDate = new Date()
-    maxDate.setDate(maxDate.getDate() + 30)
+    maxDate.setDate(today.getDate() + 30)
     maxDate.setHours(23, 59, 59, 999)
+    return date < today || date > maxDate
+  }
 
-    // Check if date is in the past or more than 30 days in the future
-    if (date < today || date > maxDate) {
-      return true
-    }
-
-    // Check if date is disabled in selected dates
+  // Only disable dates from selectedDates with status DISABLED
+  const disabledDates = (date: Date) => {
     const selectedDate = selectedDates.find(
       (sd) => new Date(sd.date).toDateString() === date.toDateString()
     )
@@ -111,13 +109,21 @@ export function AppointmentCalendar({
         <Calendar
           mode="single"
           selected={selectedDate}
-          onSelect={onSelectDate}
+          onSelect={date => {
+            if (date && !disabledDates(date) && !outOfRangeDates(date)) {
+              onSelectDate(date)
+            }
+          }}
           className="rounded-md border"
           modifiers={{ 
             booked: appointmentDates,
             disabled: selectedDates
               .filter((sd) => sd.status === DateStatus.DISABLED)
-              .map((sd) => new Date(sd.date))
+              .map((sd) => new Date(sd.date)),
+            outOfRange: outOfRangeDates
+          }}
+          modifiersClassNames={{
+            outOfRange: "rdp-day_outside"
           }}
           modifiersStyles={{
             booked: { backgroundColor: "#00ffff33" },
@@ -125,7 +131,7 @@ export function AppointmentCalendar({
           }}
           disabled={disabledDates}
           onDayClick={(day) => {
-            if (disabledDates(day)) {
+            if (disabledDates(day) || outOfRangeDates(day)) {
               const message = getDisabledDateMessage(day)
               if (message) {
                 toast.error(message)
