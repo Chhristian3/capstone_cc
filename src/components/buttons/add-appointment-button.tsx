@@ -23,18 +23,20 @@ export function AddAppointmentButton() {
       <DialogTrigger asChild>
         <Button>Add Appointment</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Add New Appointment</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-center text-muted-foreground">
             All the highlighted dates are not available for appointment
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4 md:grid-cols-2">
-          <AppointmentCalendar
-            onSelectDate={setSelectedDate}
-            selectedDate={selectedDate}
-          />
+        <div className="grid gap-6 py-6 md:grid-cols-2 overflow-y-auto">
+          <div className="flex flex-col items-center space-y-4">
+            <AppointmentCalendar
+              onSelectDate={setSelectedDate}
+              selectedDate={selectedDate}
+            />
+          </div>
           <AddAppointmentForm
             onSuccess={() => setOpen(false)}
             selectedDate={selectedDate}

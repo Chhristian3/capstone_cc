@@ -216,105 +216,97 @@ export function DateTimePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <div className="sm:flex">
+        <div className="flex flex-col sm:flex-row">
           <Calendar
             mode="single"
             selected={date}
             onSelect={handleDateSelect}
             initialFocus
             disabled={isDateDisabled}
+            className="border-0"
           />
-          <ScrollArea className="h-[304px] w-12 sm:w-auto ml-4 mt-2">
-            <div className="flex flex-col">
-              {hours.map((hour) => {
-                const isPM = date ? date.getHours() >= 12 : false;
-                const isDisabled = isHourDisabled(hour, isPM);
-                return (
-                  <Button
-                    type="button"
-                    key={hour}
-                    size="icon"
-                    variant={
-                      date && date.getHours() === hour
-                        ? "default"
-                        : "ghost"
-                    }
-                    className={cn(
-                      "sm:w-full shrink-0 aspect-square",
-                      isDisabled && "opacity-50 cursor-not-allowed"
-                    )}
-                    onClick={() => !isDisabled && handleTimeChange("hour", hour.toString())}
-                    disabled={isDisabled}
-                  >
-                    {getDisplayHour(hour)}
-                  </Button>
-                );
-              })}
-            </div>
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
-          <ScrollArea className="h-[304px] w-12 sm:w-auto mt-2">
-            <div className="flex flex-col">
-              {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => {
-                const isDisabled = isMinuteDisabled(minute);
-                return (
-                  <Button
-                    type="button"
-                    key={minute}
-                    size="icon"
-                    variant={
-                      date && date.getMinutes() === minute
-                        ? "default"
-                        : "ghost"
-                    }
-                    className={cn(
-                      "sm:w-full shrink-0 aspect-square",
-                      isDisabled && "opacity-50 cursor-not-allowed"
-                    )}
-                    onClick={() => !isDisabled && handleTimeChange("minute", minute.toString())}
-                    disabled={isDisabled}
-                  >
-                    {minute.toString().padStart(2, "0")}
-                  </Button>
-                );
-              })}
-            </div>
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
-          <ScrollArea className="h-[304px] w-12 sm:w-auto mt-2">
-            <div className="flex flex-col">
-              {["AM", "PM"].map((ampm) => {
-                const currentHour = date?.getHours() ?? 0;
-                const isDisabled = date && (
-                  (ampm === "AM" && currentHour >= 12 && currentHour < BUSINESS_HOURS_START) ||
-                  (ampm === "PM" && currentHour < BUSINESS_HOURS_START)
-                );
-                return (
-                  <Button
-                    type="button"
-                    key={ampm}
-                    size="icon"
-                    variant={
-                      date &&
-                      ((ampm === "AM" && currentHour < 12) ||
-                        (ampm === "PM" && currentHour >= 12))
-                        ? "default"
-                        : "ghost"
-                    }
-                    className={cn(
-                      "sm:w-full shrink-0 aspect-square",
-                      isDisabled && "opacity-50 cursor-not-allowed"
-                    )}
-                    onClick={() => !isDisabled && handleTimeChange("ampm", ampm)}
-                    disabled={isDisabled}
-                  >
-                    {ampm}
-                  </Button>
-                );
-              })}
-            </div>
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
+          <div className="flex border-t sm:border-t-0 sm:border-l">
+            <ScrollArea className="h-[280px] sm:h-[304px] w-[120px] border-r">
+              <div className="grid grid-cols-1 gap-1 p-2">
+                {hours.map((hour) => {
+                  const isPM = date ? date.getHours() >= 12 : false;
+                  const isDisabled = isHourDisabled(hour, isPM);
+                  return (
+                    <Button
+                      type="button"
+                      key={hour}
+                      variant={date && date.getHours() === hour ? "default" : "ghost"}
+                      className={cn(
+                        "w-full h-8 text-xs justify-center",
+                        isDisabled && "opacity-50 cursor-not-allowed"
+                      )}
+                      onClick={() => !isDisabled && handleTimeChange("hour", hour.toString())}
+                      disabled={isDisabled}
+                    >
+                      {getDisplayHour(hour)}:00
+                    </Button>
+                  );
+                })}
+              </div>
+              <ScrollBar orientation="vertical" />
+            </ScrollArea>
+            <ScrollArea className="h-[280px] sm:h-[304px] w-[120px] border-r">
+              <div className="grid grid-cols-1 gap-1 p-2">
+                {Array.from({ length: 12 }, (_, i) => i * 5).map((minute) => {
+                  const isDisabled = isMinuteDisabled(minute);
+                  return (
+                    <Button
+                      type="button"
+                      key={minute}
+                      variant={date && date.getMinutes() === minute ? "default" : "ghost"}
+                      className={cn(
+                        "w-full h-8 text-xs justify-center",
+                        isDisabled && "opacity-50 cursor-not-allowed"
+                      )}
+                      onClick={() => !isDisabled && handleTimeChange("minute", minute.toString())}
+                      disabled={isDisabled}
+                    >
+                      :{minute.toString().padStart(2, "0")}
+                    </Button>
+                  );
+                })}
+              </div>
+              <ScrollBar orientation="vertical" />
+            </ScrollArea>
+            <ScrollArea className="h-[280px] sm:h-[304px] w-[80px]">
+              <div className="grid grid-cols-1 gap-1 p-2">
+                {["AM", "PM"].map((ampm) => {
+                  const currentHour = date?.getHours() ?? 0;
+                  const isDisabled = date && (
+                    (ampm === "AM" && currentHour >= 12 && currentHour < BUSINESS_HOURS_START) ||
+                    (ampm === "PM" && currentHour < BUSINESS_HOURS_START)
+                  );
+                  return (
+                    <Button
+                      type="button"
+                      key={ampm}
+                      variant={
+                        date &&
+                        ((ampm === "AM" && currentHour < 12) ||
+                          (ampm === "PM" && currentHour >= 12))
+                          ? "default"
+                          : "ghost"
+                      }
+                      className={cn(
+                        "w-full h-8 text-xs justify-center",
+                        isDisabled && "opacity-50 cursor-not-allowed"
+                      )}
+                      onClick={() => !isDisabled && handleTimeChange("ampm", ampm)}
+                      disabled={isDisabled}
+                    >
+                      {ampm}
+                    </Button>
+                  );
+                })}
+              </div>
+              <ScrollBar orientation="vertical" />
+            </ScrollArea>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

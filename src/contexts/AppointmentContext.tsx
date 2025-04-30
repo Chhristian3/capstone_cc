@@ -56,13 +56,16 @@ export function AppointmentProvider({
 
   const fetchUserAppointments = async () => {
     try {
+      console.log('Fetching user appointments...')
       const response = await fetch("/api/appointments/user", {
         cache: "no-store",
       })
+      console.log('User appointments response status:', response.status)
       if (!response.ok) {
         throw new Error("Failed to fetch user appointments")
       }
       const data = await response.json()
+      console.log('User appointments data:', data)
       setUserAppointments(data)
     } catch (error) {
       console.error("Error fetching user appointments:", error)
@@ -71,13 +74,16 @@ export function AppointmentProvider({
 
   const fetchAllAppointments = async () => {
     try {
+      console.log('Fetching all appointments...')
       const response = await fetch("/api/appointments", {
         cache: "no-store",
       })
+      console.log('All appointments response status:', response.status)
       if (!response.ok) {
         throw new Error("Failed to fetch all appointments")
       }
       const data = await response.json()
+      console.log('All appointments data:', data)
       setAllAppointments(data)
     } catch (error) {
       console.error("Error fetching all appointments:", error)

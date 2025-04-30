@@ -534,7 +534,10 @@ export function AddAppointmentForm({
   return (
     <>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-col space-y-4"
+        >
           <FormField
             control={form.control}
             name="title"
@@ -668,9 +671,11 @@ export function AddAppointmentForm({
               </FormItem>
             )}
           />
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Submitting..." : "Submit"}
-          </Button>
+          <div className="flex justify-end pt-4 sticky bottom-0 bg-background">
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Submitting..." : "Submit"}
+            </Button>
+          </div>
         </form>
       </Form>
 
@@ -685,6 +690,13 @@ export function AddAppointmentForm({
           <div className="flex flex-col items-center space-y-4">
             <div className="p-4 bg-white rounded-lg">
               <QRCodeSVG value={paymentQRCode} size={200} />
+            </div>
+            <div className="text-center px-4 py-2">
+              <p className="text-xs text-muted-foreground italic leading-tight">
+                According to Article 1482 of the Civil Code of the Philippines,
+                <br />
+                earnest money in a contract of sale serves as proof of the perfection of the contract of sale unless there is a stipulation to the contrary
+              </p>
             </div>
             <div className="w-full space-y-4">
               <div className="space-y-2">
