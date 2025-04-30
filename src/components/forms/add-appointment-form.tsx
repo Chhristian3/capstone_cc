@@ -691,11 +691,16 @@ export function AddAppointmentForm({
             <div className="p-4 bg-white rounded-lg">
               <QRCodeSVG value={paymentQRCode} size={200} />
             </div>
-            <div className="text-center px-4 py-2">
+            <div className="text-left px-4 py-2">
               <p className="text-xs text-muted-foreground italic leading-tight">
-                According to Article 1482 of the Civil Code of the Philippines,
-                <br />
-                earnest money in a contract of sale serves as proof of the perfection of the contract of sale unless there is a stipulation to the contrary
+                <div className="text-center mb-2">
+                  Article 1482 of the Civil Code of the Philippines
+                </div>
+                <div className="text-justify pl-4">
+                  Earnest money in a contract of sale serves as proof of the perfection of the contract of sale unless there is a stipulation to the contrary.
+                  <br /><br />
+                  NOTE: To confirm your appointment, a non-refundable downpayment is required. This serves as a sign of your commitment and secures your slot. The amount paid will be deducted from your total bill after the appointment. Please note that this downpayment is non-refundable, even if the appointment is canceled or rescheduled.
+                </div>
               </p>
             </div>
             <div className="w-full space-y-4">

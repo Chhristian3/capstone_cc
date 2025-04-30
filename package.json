@@ -15,7 +15,7 @@
     "@auth/prisma-adapter": "^2.7.4",
     "@clerk/nextjs": "^6.5.1",
     "@hookform/resolvers": "^3.9.1",
-    "@prisma/client": "^5.10.2",
+    "@prisma/client": "^6.0.1",
     "@prisma/extension-accelerate": "^1.0.0",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-collapsible": "^1.1.1",
